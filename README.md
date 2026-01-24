@@ -215,11 +215,14 @@ This project is available for educational purposes.
 
 ## 👨‍💻 Author
 
-**AdrishikharChowdhury**
-- GitHub: [AdrishikharChowdhury](https://github.com/AdrishikharChowdhury)
-- GitHub: [Adrika Das](https://github.com/adrikadas0709-afk)
-- GitHub: [Ryan Chowdhury](https://github.com/ryanchowdhury09-lol)
-- GitHub: [Bristi Chowdhury](https://github.com/bristichowdhury87-creator)
+- **AdrishikharChowdhury**
+    GitHub: [AdrishikharChowdhury](https://github.com/AdrishikharChowdhury)
+- **adrikadas0709-afk**
+    GitHub: [Adrika Das](https://github.com/adrikadas0709-afk)
+- **ryanchowdhury09-lol**
+    GitHub: [Ryan Chowdhury](https://github.com/ryanchowdhury09-lol)
+- **bristichowdhury87-creator**
+    GitHub: [Bristi Chowdhury](https://github.com/bristichowdhury87-creator)
 
 ## 🤝 Contributing
 
