@@ -217,6 +217,9 @@ This project is available for educational purposes.
 
 **AdrishikharChowdhury**
 - GitHub: [AdrishikharChowdhury](https://github.com/AdrishikharChowdhury)
+- GitHub: [Adrika Das](https://github.com/adrikadas0709-afk)
+- GitHub: [Ryan Chowdhury](https://github.com/ryanchowdhury09-lol)
+- GitHub: [Bristi Chowdhury](https://github.com/bristichowdhury87-creator)
 
 ## 🤝 Contributing
 
