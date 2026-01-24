@@ -1,0 +1,12 @@
+# requirements.txt - Huffman + Shannon-Fano Compression Flask App
+# pip install -r requirements.txt
+
+Flask==3.0.3
+Werkzeug==3.0.4
+opencv-python==4.10.0.84
+Pillow==11.1.0
+bitarray==2.9.2
+numpy==2.1.1
+
+# Optional: Development
+python-dotenv==1.0.1
