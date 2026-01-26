@@ -30,8 +30,8 @@ def _run_shannon_fano(input_file):
     print("Compressing with Shannon-Fano...")
     compressed, _ = compressor.compress(text)
     
-    output_file = f"{outputShannonFiles}/shannon_test.huf"
-    save_compressed_file(compressed, input_file, output_file)
+    output_file = f"{outputShannonFiles}/shannon_test.sf"
+    compressor.compress_file(text, output_file)
     
     comp_size = len(open(output_file, 'rb').read())
     return {"name": "Shannon-Fano", "orig_size": orig_len, "comp_size": comp_size}
@@ -46,7 +46,7 @@ def _run_huffman(input_file):
     compressed, _, _ = compressor.compress(text)
     
     output_file = f"{outputHuffmanFiles}/huffman_test.huf"
-    save_compressed_file(compressed, input_file, output_file)
+    compressor.compress_file(text, output_file)
     
     comp_size = len(open(output_file, 'rb').read())
     return {"name": "Huffman", "orig_size": orig_len, "comp_size": comp_size}
@@ -64,7 +64,7 @@ def _run_adaptive_huffman(input_file):
     compressor = AdaptiveHuffmanCompressor()
     compressed_bits, _ = compressor.compress_stream(text)
     
-    output_file = f"{outputAdaptiveHuffmannFiles}/adaptive_test.huf"
+    output_file = f"{outputAdaptiveHuffmannFiles}/adaptive_test.ahuf"
     save_compressed_file(compressed_bits, input_file, output_file)
     
     comp_size = len(open(output_file, 'rb').read())
@@ -147,3 +147,5 @@ def compare_all_techniques():
     
     print("-" * 75)
     print(f"\n🏆 Best performing technique: {results[0]['name']}\n")
+
+

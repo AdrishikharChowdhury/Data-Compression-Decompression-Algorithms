@@ -1,9 +1,10 @@
+from typing import Optional
 from bitarray import bitarray
 
 class AdaptiveHuffmanNode:
     _order_counter = 512  # Start high and count down
     
-    def __init__(self, parent=None, left=None, right=None, weight=0, char=None):
+    def __init__(self, parent: Optional['AdaptiveHuffmanNode'] = None, left: Optional['AdaptiveHuffmanNode'] = None, right: Optional['AdaptiveHuffmanNode'] = None, weight: int = 0, char: Optional[str] = None):
         self.parent = parent
         self.left = left
         self.right = right
@@ -12,7 +13,7 @@ class AdaptiveHuffmanNode:
         self.order = AdaptiveHuffmanNode._order_counter
         AdaptiveHuffmanNode._order_counter -= 1
 
-    def is_leaf(self):
+    def is_leaf(self) -> bool:
         return self.left is None and self.right is None
 
     def __repr__(self):
@@ -82,7 +83,7 @@ class AdaptiveHuffmanCompressor:
         node1.order, node2.order = node2.order, node1.order
 
     def _update_tree(self, leaf):
-        """Update tree using Vitter's FGK algorithm."""
+        """Update tree using Vitter's FGK algorithm with improved efficiency."""
         current = leaf
         while current is not None:
             # Find the leader of current's weight block
@@ -125,24 +126,28 @@ class AdaptiveHuffmanCompressor:
                 # Split NYT into two children
                 old_nyt = self.NYT
                 
-                # New NYT (left child) - created after char node so it has lower order
-                new_char_node = AdaptiveHuffmanNode(parent=old_nyt, char=char, weight=0)
+                # New character node (right child) with weight 1
+                new_char_node = AdaptiveHuffmanNode(parent=old_nyt, char=char, weight=1)
+                # New NYT (left child) with weight 0
                 new_nyt = AdaptiveHuffmanNode(parent=old_nyt, char='NYT', weight=0)
                 
                 # Update old NYT to become internal node
                 old_nyt.left = new_nyt
                 old_nyt.right = new_char_node
                 old_nyt.char = None
+                old_nyt.weight = 1  # Internal node weight is sum of children
                 
                 # Update tracking
                 self.NYT = new_nyt
                 self.char_to_node[char] = new_char_node
                 self.all_nodes.extend([new_char_node, new_nyt])
                 
-                # Update tree from parent of new node
+                # Update tree from old_nyt upwards
                 self._update_tree(old_nyt)
 
         total_bits = len(compressed)
         bit_string = compressed.to01()
         print(f"Total compressed size: {total_bits} bits ({total_bits//8} bytes)")
         return bit_string, total_bits
+    
+
