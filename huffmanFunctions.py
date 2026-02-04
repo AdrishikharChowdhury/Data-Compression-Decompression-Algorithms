@@ -53,7 +53,7 @@ def _ultra_optimized_huffman(text, input_file, orig_len):
     compressed_text = ''.join(compressed)
     
     if len(compressed_text) < orig_len:
-        output_file = f"{outputHuffmanFiles}/compressed_{os.path.basename(input_file)}.huf"
+        output_file = f"{outputHuffmanFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.huf"
         with open(output_file, 'wb') as f:
             # Minimal header: just original size
             f.write(orig_len.to_bytes(2, 'big'))
@@ -92,7 +92,7 @@ def _ultra_optimized_huffman(text, input_file, orig_len):
         padding = (8 - len(encoded_bits) % 8) % 8
         encoded_bits += '0' * padding
         
-        output_file = f"{outputHuffmanFiles}/compressed_{os.path.basename(input_file)}.huf"
+        output_file = f"{outputHuffmanFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.huf"
         with open(output_file, 'wb') as f:
             f.write(b'H')  # Huffman marker
             f.write(orig_len.to_bytes(2, 'big'))  # Original size
@@ -117,7 +117,7 @@ def _ultra_optimized_huffman(text, input_file, orig_len):
             return {"name": "Huffman", "orig_size": orig_len, "comp_size": comp_size}
     
     # FORCE REAL COMPRESSION - pack 2 chars into 1 byte
-    output_file = f"{outputHuffmanFiles}/compressed_{os.path.basename(input_file)}.huf"
+    output_file = f"{outputHuffmanFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.huf"
     
     if orig_len == 2:
         # Pack 2 chars into 1 byte using 4 bits each
@@ -201,7 +201,7 @@ def _improved_standard_huffman(text, input_file, orig_len):
     encoded_bits = ''.join(char_codes[char] for char in text)
     
     # Minimal overhead packaging
-    output_file = f"{outputHuffmanFiles}/compressed_{os.path.basename(input_file)}.huf"
+    output_file = f"{outputHuffmanFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.huf"
     with open(output_file, 'wb') as f:
         f.write(b'H')  # Minimal Huffman marker
         f.write(orig_len.to_bytes(2, 'big'))  # Original size
@@ -249,7 +249,7 @@ def _minimal_symbol_encoding(text, input_file, orig_len, prefix):
     encoded_bits = ''.join(codes[char] for char in text)
     
     # Save with ultra-minimal header
-    output_file = f"{outputHuffmanFiles}/compressed_{os.path.basename(input_file)}.huf"
+    output_file = f"{outputHuffmanFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.huf"
     with open(output_file, 'wb') as f:
         f.write(b"MINI")  # Minimal marker
         f.write(orig_len.to_bytes(2, 'big'))  # Original size
@@ -295,9 +295,9 @@ def _run_huffman_image(image_path):
         if not image_data:
             return {"name": "Huffman", "orig_size": orig_size, "comp_size": orig_size}
         
-        # Use the improved Huffman compressor directly with bytes
+        # Use the existing Huffman compressor directly - SAFELY
         compressor = HuffmanCompressor()
-        output_file = f"{outputHuffmanFiles}/compressed_compare_{os.path.basename(image_path)}.huf"
+        output_file = f"{outputHuffmanFiles}/{os.path.splitext(os.path.basename(image_path))[0]}.huf"
         
         # Pass bytes directly to avoid string conversion issues
         compressor.compress_file(image_data, output_file)
@@ -309,7 +309,6 @@ def _run_huffman_image(image_path):
     except Exception as e:
         import traceback
         print(f"   Huffman compression failed: {e}")
-        traceback.print_exc()
         return {"name": "Huffman", "orig_size": os.path.getsize(image_path), "comp_size": os.path.getsize(image_path)}
 
 def huffmanImageCompression():
@@ -359,30 +358,12 @@ def huffmanImageCompression():
             print("Error: Image file is empty!")
             return
         
-        # Convert to bytes if needed
-        if isinstance(image_data, str):
-            image_data = image_data.encode('latin1')
-        
-        # Add size threshold check - very small images shouldn't be compressed
-        if orig_size < 200:
-            print(f"   Image too small for compression (overhead would increase size)")
-            print(f"   Original: {orig_size:,} bytes")
-            print(f"   Compressed: {orig_size:,} bytes")
-            print(f"   Space saved: 0.0%")
-            return
-        
-        # Use Huffman compressor for binary data
+        # Use existing working Huffman compressor
         compressor = HuffmanCompressor()
         
-        # Convert bytes to string-like format for compression (more efficient)
-        # Use extended Unicode characters for 128-255 to avoid string conversion overhead
-        text_data = ''.join(chr(int(b)) if int(b) < 256 else chr(128 + (int(b) % 128)) for b in image_data)
-        
-        compressed, root, codes = compressor.compress(text_data)
-        
         # Save compressed image
-        output_file = f"{outputHuffmanFiles}/compressed_image_{os.path.basename(selected_image)}.huf"
-        compressor.compress_file(text_data, output_file)
+        output_file = f"{outputHuffmanFiles}/{os.path.splitext(os.path.basename(selected_image))[0]}.huf"
+        compressor.compress_file(image_data, output_file)
         
         comp_size = len(open(output_file, 'rb').read())
         

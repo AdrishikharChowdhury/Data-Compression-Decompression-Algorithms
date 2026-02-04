@@ -1,6 +1,7 @@
 from collections import Counter
 from file_handler import read_text_file,_print_results
 import os
+import glob
 from constants import inputFiles,outputShannonFiles,outputAdaptiveHuffmannFiles
 from adaptiveHuffmann import AdaptiveHuffmanCompressor
 from file_handler import read_binary_data
@@ -65,7 +66,7 @@ def _ultra_optimized_shannon_fano(text, input_file, orig_len):
         padding = (8 - len(encoded_bits) % 8) % 8
         encoded_bits += '0' * padding
         
-        output_file = f"{outputShannonFiles}/compressed_{os.path.basename(input_file)}.sf"
+        output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
         with open(output_file, 'wb') as f:
             f.write(b'S')  # Shannon-Fano marker
             f.write(orig_len.to_bytes(2, 'big'))  # Original size
@@ -110,7 +111,7 @@ def _ultra_optimized_shannon_fano(text, input_file, orig_len):
     compressed_text = ''.join(compressed)
     
     if len(compressed_text) < orig_len:
-        output_file = f"{outputShannonFiles}/compressed_{os.path.basename(input_file)}.sf"
+        output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
         with open(output_file, 'wb') as f:
             f.write(b'R')  # RLE marker
             f.write(orig_len.to_bytes(2, 'big'))
@@ -122,7 +123,7 @@ def _ultra_optimized_shannon_fano(text, input_file, orig_len):
         return {"name": "Shannon-Fano", "orig_size": orig_len, "comp_size": comp_size}
     
     # FORCE REAL COMPRESSION - pack chars efficiently
-    output_file = f"{outputShannonFiles}/compressed_{os.path.basename(input_file)}.sf"
+    output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
     
     if orig_len == 2:
         # Different packing strategy - use numeric codes
@@ -217,7 +218,7 @@ def _improved_standard_shannon_fano(text, input_file, orig_len):
     encoded_bits = ''.join(char_codes[char] for char in text)
     
     # Minimal overhead packaging
-    output_file = f"{outputShannonFiles}/compressed_{os.path.basename(input_file)}.sf"
+    output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
     with open(output_file, 'wb') as f:
         f.write(b'S')  # Minimal Shannon-Fano marker
         f.write(orig_len.to_bytes(2, 'big'))  # Original size
@@ -232,6 +233,7 @@ def _improved_standard_shannon_fano(text, input_file, orig_len):
         # Write packed data
         padding = (8 - len(encoded_bits) % 8) % 8
         encoded_bits += '0' * padding
+        f.write(padding.to_bytes(1, 'big'))
         
         for i in range(0, len(encoded_bits), 8):
             byte_val = int(encoded_bits[i:i+8], 2)
@@ -251,7 +253,7 @@ def _fixed_3bit_encoding(text, input_file, orig_len, prefix):
     encoded_bits = ''.join(codes[char] for char in text)
     
     # Save with minimal header
-    output_file = f"{outputShannonFiles}/compressed_{os.path.basename(input_file)}.sf"
+    output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
     with open(output_file, 'wb') as f:
         f.write(b"3BIT")  # 3-bit marker
         f.write(orig_len.to_bytes(2, 'big'))  # Original size
@@ -285,7 +287,7 @@ def _fixed_4bit_encoding(text, input_file, orig_len, prefix):
     encoded_bits = ''.join(codes[char] for char in text)
     
     # Save with minimal header
-    output_file = f"{outputShannonFiles}/compressed_{os.path.basename(input_file)}.sf"
+    output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
     with open(output_file, 'wb') as f:
         f.write(b"4BIT")  # 4-bit marker
         f.write(orig_len.to_bytes(2, 'big'))  # Original size
@@ -316,7 +318,7 @@ def _smart_prefix_encoding(text, left_group, right_group, input_file, orig_len, 
     left_codes = {char: '0' + format(i, f'0{(len(left_group)-1).bit_length()}b') 
                    for i, (char, _) in enumerate(left_group)}
     right_codes = {char: '1' + format(i, f'0{(len(right_group)-1).bit_length()}b') 
-                    for i, (char, _) in enumerate(right_group)}
+                     for i, (char, _) in enumerate(right_group)}
     
     # Combine codes
     all_codes = {**left_codes, **right_codes}
@@ -325,7 +327,7 @@ def _smart_prefix_encoding(text, left_group, right_group, input_file, orig_len, 
     encoded_bits = ''.join(all_codes[char] for char in text)
     
     # Save with minimal header
-    output_file = f"{outputShannonFiles}/compressed_{os.path.basename(input_file)}.sf"
+    output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
     with open(output_file, 'wb') as f:
         f.write(b"PREFIX")  # Prefix marker
         f.write(orig_len.to_bytes(2, 'big'))  # Original size
@@ -373,9 +375,9 @@ def _run_shannon_fano_image(image_path):
         if not image_data:
             return {"name": "Shannon-Fano", "orig_size": orig_size, "comp_size": orig_size}
         
-        # Use the improved Shannon-Fano compressor directly with bytes
+        # Use the existing Shannon-Fano compressor directly - SAFELY
         compressor = ShannonFanoCompressor()
-        output_file = f"{outputShannonFiles}/compressed_compare_{os.path.basename(image_path)}.sf"
+        output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(image_path))[0]}.sf"
         
         # Pass bytes directly to avoid string conversion issues
         compressor.compress_file(image_data, output_file)
@@ -433,49 +435,12 @@ def shannonImageCompression():
             print("Error: Image file is empty!")
             return
         
-# Convert to bytes if needed
-        if isinstance(image_data, str):
-            image_data = image_data.encode('latin1')
-        
-        # Force compression for ALL image sizes
-        print(f"   Force compressing {orig_size:,} byte image")
-        
-        # Convert bytes to string-like format for compression (more efficient)
-        # Use extended Unicode characters for 128-255 to avoid string conversion overhead
-        text_data = ''.join(chr(int(b)) if int(b) < 256 else chr(128 + (int(b) % 128)) for b in image_data)
-        
-        # Limit text size to prevent "int too big to convert" error
-        max_text_length = 500  # Safe limit for images
-        if len(text_data) > max_text_length:
-            working_text = text_data[:max_text_length]
-            pass  # Process entire image
-        else:
-            working_text = text_data
-        
-        # Use Adaptive Huffman compressor
-        compressor = AdaptiveHuffmanCompressor()
-        compressed_bits, total_bits = compressor.compress_stream(working_text)
+        # Use existing working Shannon-Fano compressor
+        compressor = ShannonFanoCompressor()
         
         # Save compressed image
-        output_file = f"{outputAdaptiveHuffmannFiles}/compressed_image_{os.path.basename(selected_image)}.ahuf"
-        
-        with open(output_file, 'wb') as f:
-            f.write(b"AHF")  # Adaptive Huffman marker
-            f.write(orig_size.to_bytes(4, 'big'))  # Original size
-            # Use safe bit counting for total_bits
-            safe_total_bits = min(total_bits, 255) if isinstance(total_bits, int) else 255
-            f.write(safe_total_bits.to_bytes(1, 'big'))  # Total bits for reference
-            
-            from bitarray import bitarray
-            if isinstance(compressed_bits, bitarray):
-                padding = (8 - len(compressed_bits) % 8) % 8
-                f.write(padding.to_bytes(1, 'big'))  # Padding
-                compressed_bits.tofile(f)
-            else:
-                bit_data = bitarray(compressed_bits)
-                padding = (8 - len(bit_data) % 8) % 8
-                f.write(padding.to_bytes(1, 'big'))  # Padding
-                bit_data.tofile(f)
+        output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(selected_image))[0]}.sf"
+        compressor.compress_file(image_data, output_file)
         
         comp_size = len(open(output_file, 'rb').read())
         
@@ -489,7 +454,7 @@ def shannonImageCompression():
         
         savings = (orig_size - comp_size) / orig_size * 100
         
-        print(f" ADAPTIVE HUFFMAN image compression completed!")
+        print(f" SHANNON-FANO image compression completed!")
         print(f"   Original: {orig_size:,} bytes")
         print(f"   Compressed: {comp_size:,} bytes")
         print(f"   Space saved: {savings:.1f}%")
@@ -501,3 +466,4 @@ def shannonImageCompression():
         print(f"   Original: {orig_size:,} bytes")
         print(f"   Compressed: {orig_size:,} bytes")
         print(f"   Space saved: 0.0%")
+

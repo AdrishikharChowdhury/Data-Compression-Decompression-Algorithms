@@ -68,7 +68,7 @@ def _ultra_optimized_adaptive_huffman(text, input_file, orig_size):
         padding = (8 - len(encoded_bits) % 8) % 8
         encoded_bits += '0' * padding
         
-        output_file = f"{outputAdaptiveHuffmannFiles}/compressed_{os.path.basename(input_file)}.ahuf"
+        output_file = f"{outputAdaptiveHuffmannFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.ahuf"
         with open(output_file, 'wb') as f:
             f.write(b'A')  # Adaptive marker
             f.write(orig_size.to_bytes(2, 'big'))  # Original size
@@ -119,7 +119,7 @@ def _ultra_optimized_adaptive_huffman(text, input_file, orig_size):
     # FORCE COMPRESSION for ALL sizes - use best method
     if orig_size <= 50:
         # For small/medium files, use bit packing like Huffman
-        output_file = f"{outputAdaptiveHuffmannFiles}/compressed_{os.path.basename(input_file)}.ahuf"
+        output_file = f"{outputAdaptiveHuffmannFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.ahuf"
         
         if orig_size == 2:
             # Pack 2 chars into 1 byte
@@ -149,7 +149,7 @@ def _ultra_optimized_adaptive_huffman(text, input_file, orig_size):
                 f.write(packed_val.to_bytes(byte_count, 'big'))
         else:
             # For medium files (11-50), copy Huffman's successful strategy
-            output_file = f"{outputAdaptiveHuffmannFiles}/compressed_{os.path.basename(input_file)}.ahuf"
+            output_file = f"{outputAdaptiveHuffmannFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.ahuf"
             
             # Use same strategy as Huffman that got 86% compression
             if orig_size == 36:  # Special case for test_improved.txt
@@ -182,7 +182,7 @@ def _ultra_optimized_adaptive_huffman(text, input_file, orig_size):
     
     # For larger files, try RLE first
     if len(compressed_text) < orig_size:
-        output_file = f"{outputAdaptiveHuffmannFiles}/compressed_{os.path.basename(input_file)}.ahuf"
+        output_file = f"{outputAdaptiveHuffmannFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.ahuf"
         with open(output_file, 'wb') as f:
             f.write(b'R')  # RLE marker
             f.write(orig_size.to_bytes(2, 'big'))
@@ -221,7 +221,7 @@ def _minimized_overhead_adaptive_huffman(text, input_file, orig_size):
     encoded_bits = ''.join(codes[char] for char in text)
     
     # Save with minimal header
-    output_file = f"{outputAdaptiveHuffmannFiles}/compressed_{os.path.basename(input_file)}.ahuf"
+    output_file = f"{outputAdaptiveHuffmannFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.ahuf"
     with open(output_file, 'wb') as f:
         f.write(b"ADAPT")  # Adaptive marker
         f.write(orig_size.to_bytes(2, 'big'))  # Original size
@@ -261,14 +261,13 @@ def _optimized_adaptive_huffman(text, input_file, orig_size):
         compressed_bits, total_bits = compressor.compress_stream(working_text)
         
         # Save compressed data properly
-        output_file = f"{outputAdaptiveHuffmannFiles}/compressed_{os.path.basename(input_file)}.ahuf"
+        output_file = f"{outputAdaptiveHuffmannFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.ahuf"
         
         with open(output_file, 'wb') as f:
             f.write(b"AHF")  # Adaptive Huffman marker
             f.write(orig_size.to_bytes(4, 'big'))  # Original size
-            # Use safe bit counting
-            safe_total_bits = min(total_bits, 255) if isinstance(total_bits, int) else 255
-            f.write(safe_total_bits.to_bytes(1, 'big'))
+            # Write actual bit count (use 2 bytes to avoid limit)
+            f.write(total_bits.to_bytes(2, 'big'))
             
             if isinstance(compressed_bits, bitarray):
                 padding = (8 - len(compressed_bits) % 8) % 8
@@ -312,7 +311,7 @@ def _run_adaptive_huffman_image(image_path):
         if not image_data:
             return {"name": "Adaptive Huffman", "orig_size": orig_size, "comp_size": orig_size}
         
-# Convert to bytes if needed
+#Convert to bytes if needed
         if isinstance(image_data, str):
             image_data = image_data.encode('latin1')
         
@@ -335,7 +334,7 @@ def _run_adaptive_huffman_image(image_path):
         compressed_bits, total_bits = compressor.compress_stream(working_text)
         
         # Save compressed image
-        output_file = f"{outputAdaptiveHuffmannFiles}/compressed_compare_{os.path.basename(image_path)}.ahuf"
+        output_file = f"{outputAdaptiveHuffmannFiles}/{os.path.splitext(os.path.basename(image_path))[0]}.ahuf"
         
         with open(output_file, 'wb') as f:
             f.write(b"AHF")  # Adaptive Huffman marker
@@ -437,7 +436,7 @@ def adaptiveHuffmanImageCompression():
         compressed_bits, total_bits = compressor.compress_stream(working_text)
         
         # Save compressed image
-        output_file = f"{outputAdaptiveHuffmannFiles}/compressed_image_{os.path.basename(selected_image)}.ahuf"
+        output_file = f"{outputAdaptiveHuffmannFiles}/{os.path.splitext(os.path.basename(selected_image))[0]}.ahuf"
         
         with open(output_file, 'wb') as f:
             f.write(b"AHF")  # Adaptive Huffman marker
