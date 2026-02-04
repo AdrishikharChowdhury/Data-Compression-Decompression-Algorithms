@@ -48,4 +48,4 @@ def decompress_all():
     shanonDecompression() 
     adaptiveHuffmanDecompression()
     
-    print("\n✅ All files decompressed successfully!")
+    print("\n All files decompressed successfully!")

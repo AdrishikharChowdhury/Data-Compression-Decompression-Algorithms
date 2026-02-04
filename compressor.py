@@ -1,17 +1,9 @@
-from huffmanCompressor import HuffmanCompressor
-from shanonCompressor import ShannonFanoCompressor
-from adaptiveHuffmann import AdaptiveHuffmanCompressor
-from file_handler import read_text_file, save_compressed_file
-from bitarray import bitarray
 import os
-
-# --- File and Directory Setup ---
-filePath = "./files"
-inputFiles = f"{filePath}/inputs"
-outputFiles = f"{filePath}/outputs"
-outputHuffmanFiles = f"{outputFiles}/huffmann_files"
-outputShannonFiles = f"{outputFiles}/shannon_files"
-outputAdaptiveHuffmannFiles = f"{outputFiles}/adaptive_huffman_files"
+from constants import inputFiles,outputAdaptiveHuffmannFiles,outputHuffmanFiles,outputShannonFiles
+import glob
+from shanonfanofunctions import _run_shannon_fano
+from huffmanFunctions import _run_huffman
+from adaptiveHuffmanfunctions import _run_adaptive_huffman
 
 # Create ALL directories
 os.makedirs(inputFiles, exist_ok=True)
@@ -19,109 +11,79 @@ os.makedirs(outputHuffmanFiles, exist_ok=True)
 os.makedirs(outputShannonFiles, exist_ok=True)
 os.makedirs(outputAdaptiveHuffmannFiles, exist_ok=True)
 
-# --- Core Compression Logic ---
-
-def _run_shannon_fano(input_file):
-    """Runs Shannon-Fano compression and returns stats."""
-    compressor = ShannonFanoCompressor()
-    text = read_text_file(input_file)
-    orig_len = len(open(input_file, 'rb').read())
+def compare_all_techniques_with_choice():
+    """Compare all compression techniques on user-selected file."""
     
-    print("Compressing with Shannon-Fano...")
-    compressed, _ = compressor.compress(text)
     
-    output_file = f"{outputShannonFiles}/shannon_test.sf"
-    compressor.compress_file(text, output_file)
+    print("\n Available text files for comparison:")
+    text_extensions = ['*.txt', '*.csv', '*.json', '*.xml', '*.html', '*.md', '*.log']
+    available_files = []
     
-    comp_size = len(open(output_file, 'rb').read())
-    return {"name": "Shannon-Fano", "orig_size": orig_len, "comp_size": comp_size}
-
-def _run_huffman(input_file):
-    """Runs Huffman compression and returns stats."""
-    compressor = HuffmanCompressor()
-    text = read_text_file(input_file)
-    orig_len = len(open(input_file, 'rb').read())
+    for ext in text_extensions:
+        available_files.extend(glob.glob(f"{inputFiles}/*{ext}"))
+        available_files.extend(glob.glob(f"{inputFiles}/*{ext.upper()}"))
     
-    print("Compressing with Huffman...")
-    compressed, _, _ = compressor.compress(text)
-    
-    output_file = f"{outputHuffmanFiles}/huffman_test.huf"
-    compressor.compress_file(text, output_file)
-    
-    comp_size = len(open(output_file, 'rb').read())
-    return {"name": "Huffman", "orig_size": orig_len, "comp_size": comp_size}
-
-def _run_adaptive_huffman(input_file):
-    """Runs Adaptive Huffman compression and returns stats."""
-    text = read_text_file(input_file)
-    if not text.strip():
-        print("Error: Input file is empty!")
+    if not available_files:
+        print("No text files found in inputs folder.")
         return None
-        
-    orig_size = len(open(input_file, 'rb').read())
     
-    print("Compressing with Adaptive Huffman...")
-    compressor = AdaptiveHuffmanCompressor()
-    compressed_bits, _ = compressor.compress_stream(text)
+    # Remove duplicates and sort
+    available_files = list(set(available_files))
+    available_files.sort()
     
-    output_file = f"{outputAdaptiveHuffmannFiles}/adaptive_test.ahuf"
-    save_compressed_file(compressed_bits, input_file, output_file)
+    for i, file in enumerate(available_files, 1):
+        size = os.path.getsize(file)
+        print(f"{i}. {os.path.basename(file)} ({size:,} bytes)")
     
-    comp_size = len(open(output_file, 'rb').read())
-    return {"name": "Adaptive Huffman", "orig_size": orig_size, "comp_size": comp_size}
-
-# --- Public Functions for Menu ---
-
-def _print_results(stats):
-    """Helper function to print formatted compression results."""
-    if not stats:
-        return
-    savings = (1 - stats["comp_size"] / stats["orig_size"]) * 100
-    print(
-        f"Compression complete for {stats['name']}. "
-        f"Original: {stats['orig_size']}B, "
-        f"Compressed: {stats['comp_size']}B, "
-        f"Space Saved: {savings:.1f}%"
-    )
-
-def shanonCompression():
-    input_file = f"{inputFiles}/test.txt"
-    if not os.path.exists(input_file):
-        print(f"Error: {input_file} not found!")
-        return
-    stats = _run_shannon_fano(input_file)
-    _print_results(stats)
-
-def huffmanCompression():
-    input_file = f"{inputFiles}/test.txt"
-    if not os.path.exists(input_file):
-        print(f"Error: {input_file} not found!")
-        return
-    stats = _run_huffman(input_file)
-    _print_results(stats)
-
-def adaptiveHuffmanCompression():
-    input_file = f"{inputFiles}/test.txt"
-    if not os.path.exists(input_file):
-        print(f"Error: {input_file} not found!")
-        return
-    stats = _run_adaptive_huffman(input_file)
-    _print_results(stats)
-
-def compare_all_techniques():
-    """Runs all compression algorithms and prints a comparison table."""
-    input_file = f"{inputFiles}/test.txt"
-    if not os.path.exists(input_file):
-        print(f"Error: {input_file} not found!")
-        return
-
-    print("\n--- Comparing All Compression Techniques ---")
+    try:
+        choice = int(input("Select text file for comparison (number): ")) - 1
+        if 0 <= choice < len(available_files):
+            selected_file = available_files[choice]
+        else:
+            print("Invalid selection")
+            return None
+    except ValueError:
+        print("Please enter a valid number")
+        return None
     
-    shannon_stats = _run_shannon_fano(input_file)
-    huffman_stats = _run_huffman(input_file)
-    adaptive_stats = _run_adaptive_huffman(input_file)
+    if selected_file is None:
+        return
     
-    results = [shannon_stats, huffman_stats, adaptive_stats]
+    print(f"\n Comparing compression techniques on {os.path.basename(selected_file)}...")
+    
+    # Read the file
+    with open(selected_file, 'r', encoding='utf-8') as f:
+        text_content = f.read()
+    
+    if not text_content.strip():
+        print("File is empty!")
+        return
+    
+    original_size = len(text_content.encode('utf-8'))
+    
+    # Run all compression algorithms on the selected file
+    print("\nRunning Huffman compression...")
+    try:
+        huffman_stats = _run_huffman(selected_file)
+    except Exception as e:
+        print(f"Huffman error: {e}")
+        huffman_stats = {"name": "Huffman", "orig_size": original_size, "comp_size": original_size}
+    
+    print("Running Shannon-Fano compression...")
+    try:
+        shannon_stats = _run_shannon_fano(selected_file)
+    except Exception as e:
+        print(f"Shannon-Fano error: {e}")
+        shannon_stats = {"name": "Shannon-Fano", "orig_size": original_size, "comp_size": original_size}
+    
+    print("Running Adaptive Huffman compression...")
+    try:
+        adaptive_stats = _run_adaptive_huffman(selected_file)
+    except Exception as e:
+        print(f"Adaptive Huffman error: {e}")
+        adaptive_stats = {"name": "Adaptive Huffman", "orig_size": original_size, "comp_size": original_size}
+    
+    results = [huffman_stats, shannon_stats, adaptive_stats]
     results = [r for r in results if r is not None] # Filter out failed runs
     
     if not results:
@@ -136,16 +98,16 @@ def compare_all_techniques():
     results.sort(key=lambda x: x["savings"], reverse=True)
 
     # Print table
-    print("\n--- Comparison Results ---")
-    print(f"{'Technique':<20} | {'Original Size':<15} | {'Compressed Size':<17} | {'Space Saved':<15}")
-    print("-" * 75)
-    for r in results:
-        print(
-            f"{r['name']:<20} | {str(r['orig_size']) + 'B':<15} | "
-            f"{str(r['comp_size']) + 'B':<17} | {r['savings']:.1f}%"
-        )
+    print(f"\n Results for {os.path.basename(selected_file)}:")
+    print("-" * 80)
+    print(f"{'Algorithm':<20} {'Original':<12} {'Compressed':<12} {'Space Saved':<12} {'Rank'}")
+    print("-" * 80)
     
-    print("-" * 75)
-    print(f"\n🏆 Best performing technique: {results[0]['name']}\n")
-
-
+    for i, r in enumerate(results, 1):
+        compression_ratio = r["savings"]
+        rank_emoji = "" if i == 1 else "" if i == 2 else ""
+        print(f"{r['name']:<20} {r['orig_size']:<12} {r['comp_size']:<12} "
+              f"{compression_ratio:<11.1f}% {rank_emoji}")
+    
+    print("-" * 80)
+    print(f"\n Best performing technique: {results[0]['name']} with {results[0]['savings']:.1f}% compression\n")

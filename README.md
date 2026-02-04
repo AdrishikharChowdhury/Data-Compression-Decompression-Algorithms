@@ -2,7 +2,7 @@
 
 A comprehensive Python implementation of three major lossless data compression algorithms with **complete decompression functionality** and performance comparison.
 
-## 🎯 Project Overview
+## Project Overview
 
 This project implements:
 - **Shannon-Fano Compression & Decompression**
@@ -10,65 +10,65 @@ This project implements:
 - **Adaptive Huffman Compression & Decompression**
 
 With the following key features:
-- ✅ **Complete compression AND decompression** for all techniques
-- ✅ Proper file extensions (`.sf`, `.huf`, `.ahuf`) for each format
-- ✅ **Modular architecture** with separate compressor/decompressor classes
-- ✅ Clean file organization and automatic directory management
-- ✅ 100% accurate decompression verification
-- ✅ Performance benchmarking and comparison
+- **Complete compression AND decompression** for all techniques
+- Proper file extensions (`.sf`, `.huf`, `.ahuf`) for each format
+- **Modular architecture** with separate compressor/decompressor classes
+- **Clean file organization** and automatic directory management
+- **100% accurate decompression verification**
+- **Performance benchmarking and comparison**
 
-## 📊 Performance Results
+## Performance Results
 
 Latest performance test on sample text (1368 characters):
 
 | Technique | Original Size | Compressed Size | Space Saved | Rank |
 |-----------|---------------|-----------------|-------------|------|
-| **Adaptive Huffman** | 1368B | 776B | **43.3%** | 🥇 |
-| **Shannon-Fano** | 1368B | 894B | **34.6%** | 🥈 |
-| **Huffman** | 1368B | 952B | **30.4%** | 🥉 |
+| **Adaptive Huffman** | 1368B | 776B | **43.3%** | First |
+| **Shannon-Fano** | 1368B | 894B | **34.6%** | Second |
+| **Huffman** | 1368B | 952B | **30.4%** | Third |
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 data compression and decompression using huffmann and shanon fano/
-├── 📁 files/
-│   ├── 📁 inputs/
-│   │   └── 📄 test.txt                              # Test input file
-│   └── 📁 outputs/
-│       ├── 📁 huffmann_files/
-│       │   ├── 📄 huffman_test.huf                 # Compressed Huffman file
-│       │   └── 📄 huffman_decompressed.txt          # Decompressed output
-│       ├── 📁 shannon_files/
-│       │   ├── 📄 shannon_test.sf                  # Compressed Shannon-Fano file
-│       │   └── 📄 shannon_decompressed.txt         # Decompressed output
-│       └── 📁 adaptive_huffman_files/
-│           ├── 📄 adaptive_test.ahuf               # Compressed Adaptive Huffman file
-│           └── 📄 adaptive_decompressed.txt        # Decompressed output
-│
-├── 🐍 Compression Modules/
-│   ├── 📄 huffmanCompressor.py                     # Huffman compression class
-│   ├── 📄 shanonCompressor.py                      # Shannon-Fano compression class
-│   ├── 📄 adaptiveHuffmann.py                     # Adaptive Huffman compression class
-│   └── 📄 compressor.py                           # Compression coordination
-│
-├── 🐍 Decompression Modules/
-│   ├── 📄 huffmanDecompressor.py                   # Huffman decompression class
-│   ├── 📄 shannonDecompressor.py                   # Shannon-Fano decompression class
-│   ├── 📄 adaptiveHuffmanDecompressor.py           # Adaptive Huffman decompression class
-│   └── 📄 decompressor.py                          # Decompression coordination
-│
-├── 🐍 Core Files/
-│   ├── 📄 main.py                                  # Main menu interface
-│   └── 📄 file_handler.py                         # File I/O utilities
-│
-└── 📄 README.md                                    # This documentation
+ files/
+    inputs/
+       test.txt                              # Test input file
+    outputs/
+        huffmann_files/
+           huffman_test.huf                 # Compressed Huffman file
+           huffman_decompressed.txt          # Decompressed output
+        shannon_files/
+           shannon_test.sf                  # Compressed Shannon-Fano file
+           shannon_decompressed.txt         # Decompressed output
+        adaptive_huffman_files/
+            adaptive_test.ahuf               # Compressed Adaptive Huffman file
+            adaptive_decompressed.txt        # Decompressed output
+
+ Compression Modules/
+    huffmanCompressor.py                     # Huffman compression class
+    shanonCompressor.py                      # Shannon-Fano compression class
+    adaptiveHuffmann.py                     # Adaptive Huffman compression class
+    compressor.py                           # Compression coordination
+
+ Decompression Modules/
+    huffmanDecompressor.py                   # Huffman decompression class
+    shannonDecompressor.py                   # Shannon-Fano decompression class
+    adaptiveHuffmanDecompressor.py           # Adaptive Huffman decompression class
+    decompressor.py                          # Decompression coordination
+
+ Core Files/
+    main.py                                  # Main menu interface
+    file_handler.py                         # File I/O utilities
+
+ README.md                                    # This documentation
 ```
 
-## 🚀 Installation & Usage
+## Installation & Usage
 
 ### Prerequisites
 
-Install the required package:
+Install required package:
 ```bash
 pip install bitarray
 ```
@@ -161,7 +161,7 @@ project\Scripts\activate  # Windows
 pip install -r requirements.txt
 ```
 
-## 💻 Usage
+## Usage
 
 ### Interactive Mode
 
@@ -198,14 +198,32 @@ compressed, freq, tree = huffman.compress(text)
 
 # Shannon-Fano
 shannon = ShannonFanoCompressor()
-compressed, bits = shannon.compress(text)
+compressed, codes = shannon.compress(text)
 
 # Adaptive Huffman
 adaptive = AdaptiveHuffmanCompressor()
 compressed, bits = adaptive.compress_stream(text)
 ```
 
-## 🧩 Algorithm Details
+#### Decompression
+```python
+# Import individual decompressors
+from huffmanDecompressor import HuffmanDecompressor
+from shannonDecompressor import ShannonFanoDecompressor
+from adaptiveHuffmanDecompressor import AdaptiveHuffmanDecompressor
+
+# Decompress from files
+huffman_decomp = HuffmanDecompressor()
+original_text = huffman_decomp.decompress_from_file('compressed.huf')
+
+shannon_decomp = ShannonFanoDecompressor()
+original_text = shannon_decomp.decompress_from_file('compressed.sf')
+
+adaptive_decomp = AdaptiveHuffmanDecompressor()
+original_text = adaptive_decomp.decompress_from_file('compressed.ahuf')
+```
+
+## Algorithm Details
 
 ### 1. Huffman Compression & Decompression
 - **Principle**: Optimal prefix coding based on character frequency
@@ -235,7 +253,7 @@ compressed, bits = adaptive.compress_stream(text)
   - Memory efficient
 - **Use Cases**: Streaming data, real-time applications, IoT devices
 
-## 📊 Performance Analysis
+## Performance Analysis
 
 ### Current Results (1368 bytes sample):
 - **Adaptive Huffman achieves best compression** due to efficient bit packing and optimized tree updates
@@ -244,24 +262,24 @@ compressed, bits = adaptive.compress_stream(text)
 
 ### When Each Algorithm Excels:
 
-#### 🥇 Adaptive Huffman: Best for:
+#### Adaptive Huffman: Best for:
 - **Streaming applications** - Real-time video/audio
 - **Single-pass requirements** - Large files where two passes are expensive
 - **Unknown data length** - Continuous data streams
 - **Memory constraints** - No need to store frequency table
 
-#### 🥈 Shannon-Fano: Good for:
+#### Shannon-Fano: Good for:
 - **Educational purposes** - Understanding compression principles
 - **Simple implementations** - When complexity needs to be minimal
 - **Quick prototypes** - Fast development cycles
 
-#### 🥉 Standard Huffman: Use when:
+#### Standard Huffman: Use when:
 - **Maximum theoretical optimality** is required
 - **Data is fully available upfront**
 - **Two-pass processing** is acceptable
 - **Predictable performance** is needed
 
-## 🔧 Technical Implementation
+## Technical Implementation
 
 ### File Format Specifications
 
@@ -276,10 +294,8 @@ compressed, bits = adaptive.compress_stream(text)
 #### Shannon-Fano (`.sf`)
 ```
 [4 bytes: header "SF01"]
-[2 bytes: number of unique characters]
-[For each character: 1 byte char length + char bytes + 1 byte code length + code bytes]
-[3 bytes: separator 0xFF 0xFF 0xFF]
-[1 byte: padding]
+[4 bytes: original size]
+[4 bytes: compressed size]
 [bit-packed compressed data]
 ```
 
@@ -289,7 +305,7 @@ compressed, bits = adaptive.compress_stream(text)
 [bit-packed compressed stream with NYT codes and character bytes]
 ```
 
-## 🧪 Testing & Verification
+## Testing & Verification
 
 ### Basic Testing
 ```python
@@ -309,7 +325,7 @@ original = open('files/inputs/test.txt', 'r').read()
 for algo in ['huffman', 'shannon', 'adaptive_huffman']:
     decomp_file = f'files/outputs/{algo}_files/{algo.split("_")[0]}_decompressed.txt'
     decomp_text = open(decomp_file, 'r').read()
-    print(f"{algo}: {'✅ Match' if original == decomp_text else '❌ Mismatch'}")
+    print(f"{algo}: {'Match' if original == decomp_text else 'Mismatch'}")
 ```
 
 ### Individual Algorithm Testing
@@ -322,27 +338,26 @@ huffmanCompression()  # Compress
 huffmanDecompression()  # Decompress
 ```
 
-## 🎯 Features Added
+## Features Added
 
-### ✅ Complete Functionality
+### Complete Functionality
 - **Full decompression** for all three algorithms (previously missing)
 - **100% accuracy verification** - all decompressed files match original
 - **Proper file extensions** - `.huf`, `.sf`, `.ahuf` for each technique
 - **Modular architecture** - separate compressor and decompressor classes
 
-### ✅ Enhanced Architecture
+### Enhanced Architecture
 - **Separation of concerns** - compression and decompression in different modules
 - **Independent classes** - each technique has dedicated compressor and decompressor
 - **Clean interfaces** - consistent API across all algorithms
-- **Easy maintenance** - modular structure for future improvements
 
-### ✅ Improved User Experience
+### Improved User Experience
 - **Organized file structure** - automatic directory creation
 - **Comprehensive error handling** - missing files, permission issues
 - **Progress feedback** - clear status messages during operations
 - **Menu-driven interface** - intuitive navigation
 
-## 📦 Dependencies
+## Dependencies
 
 - `bitarray` - Efficient bit-level operations
 
@@ -351,7 +366,7 @@ Install via:
 pip install bitarray
 ```
 
-## 🚀 Future Enhancements
+## Future Enhancements
 
 - [ ] Support for binary file compression
 - [ ] GUI interface with drag-and-drop
@@ -359,15 +374,14 @@ pip install bitarray
 - [ ] Batch file processing
 - [ ] Progress bars for large files
 - [ ] Compression level presets
-- [ ] Performance optimization for large files
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 - **Missing bitarray**: Install with `pip install bitarray`
 - **File not found**: Ensure test.txt exists in `files/inputs/`
 - **Permission errors**: Check write permissions in output directories
-- **Decpression failures**: Verify compressed files exist and are not corrupted
+- **Decompression failures**: Verify compressed files exist and are not corrupted
 
 ### Debug Mode
 Enable detailed output:
@@ -383,17 +397,17 @@ print("Compressed files:", [f for f in os.listdir('files/outputs') if f.endswith
 print("Decompressed files:", [f for f in os.listdir('files/outputs') if 'decompressed' in f])
 ```
 
-## 📚 References
+## References
 
 - Huffman, D. A. (1952). "A Method for the Construction of Minimum-Redundancy Codes"
 - Shannon, C. E. (1948). "A Mathematical Theory of Communication"
 - Vitter, J. S. (1987). "Design and Analysis of Dynamic Huffman Codes"
 
-## 📄 License
+## License
 
 This project is available for educational purposes.
 
-## 👨‍💻 Author
+## Authors
 
 - **AdrishikharChowdhury**
     GitHub: [AdrishikharChowdhury](https://github.com/AdrishikharChowdhury)
@@ -404,7 +418,7 @@ This project is available for educational purposes.
 - **bristichowdhury87-creator**
     GitHub: [Bristi Chowdhury](https://github.com/bristichowdhury87-creator)
 
-## 🤝 Contributing
+## Contributing
 
 Contributions, issues, and feature requests are welcome!
 

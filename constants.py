@@ -1,0 +1,6 @@
+filePath = "./files"
+inputFiles = f"{filePath}/inputs"
+outputFiles = f"{filePath}/outputs"
+outputHuffmanFiles = f"{outputFiles}/huffmann_files"
+outputShannonFiles = f"{outputFiles}/shannon_files"
+outputAdaptiveHuffmannFiles = f"{outputFiles}/adaptive_huffman_files"
