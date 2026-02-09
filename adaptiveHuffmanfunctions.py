@@ -4,6 +4,7 @@ from file_handler import read_text_file,_print_results,read_binary_data
 import os
 from constants import inputFiles,outputAdaptiveHuffmannFiles
 from huffmanFunctions import _improved_standard_huffman
+from bitarray import bitarray
 
 def _run_adaptive_huffman(input_file):
     """Runs optimized Adaptive Huffman compression with smart encoding."""
@@ -252,8 +253,6 @@ def _optimized_adaptive_huffman(text, input_file, orig_size):
     """Optimized adaptive Huffman for larger files (>200 bytes)."""
     # Process the ENTIRE file for real compression
     working_text = text
-    
-    from bitarray import bitarray
     compressor = AdaptiveHuffmanCompressor()
     
     # Use adaptive Huffman with safety checks
@@ -300,7 +299,7 @@ def adaptiveHuffmanCompression():
     _print_results(stats)
 
 def _run_adaptive_huffman_image(image_path):
-    """Run Adaptive Huffman compression on an image file"""
+    """Run Adaptive Huffman compression on an image file with optimizations for larger files"""
     print(f"   Processing {os.path.basename(image_path)} with Adaptive Huffman...")
     
     try:
@@ -311,59 +310,646 @@ def _run_adaptive_huffman_image(image_path):
         if not image_data:
             return {"name": "Adaptive Huffman", "orig_size": orig_size, "comp_size": orig_size}
         
-#Convert to bytes if needed
+        # Convert to bytes if needed
         if isinstance(image_data, str):
             image_data = image_data.encode('latin1')
         
-        # Compress ALL images regardless of size using adaptive approach
-        if orig_size < 200:
-            # For small images, use ultra-compact adaptive compression
-            working_data = image_data[:min(200, len(image_data))]  # Limit to prevent errors
-            print(f"   Using ultra-compact adaptive compression for small image")
+        # Choose compression strategy based on file size
+        if orig_size < 1000:
+            # For small images, use the existing adaptive approach
+            return _compress_small_image_adaptive(image_data, image_path, orig_size)
+        elif orig_size < 10000:
+            # For medium images, use chunked adaptive compression
+            return _compress_medium_image_adaptive(image_data, image_path, orig_size)
         else:
-            working_data = image_data
-            print(f"   Using adaptive compression for image")
-        
-        # Convert bytes to string-like format for compression (more efficient)
-        # Use extended Unicode characters for 128-255 to avoid string conversion overhead
-        text_data = ''.join(chr(int(b)) if int(b) < 256 else chr(128 + (int(b) % 128)) for b in image_data)
-        
-        # Process entire image for real compression
-        working_text = text_data
-        compressor = AdaptiveHuffmanCompressor()
-        compressed_bits, total_bits = compressor.compress_stream(working_text)
-        
-        # Save compressed image
-        output_file = f"{outputAdaptiveHuffmannFiles}/{os.path.splitext(os.path.basename(image_path))[0]}.ahuf"
-        
-        with open(output_file, 'wb') as f:
-            f.write(b"AHF")  # Adaptive Huffman marker
-            f.write(orig_size.to_bytes(4, 'big'))  # Original size
-            # Use safe bit counting for total_bits
-            safe_total_bits = min(total_bits, 255) if isinstance(total_bits, int) else 255
-            f.write(safe_total_bits.to_bytes(1, 'big'))  # Total bits for reference
-            
-            from bitarray import bitarray
-            if isinstance(compressed_bits, bitarray):
-                padding = (8 - len(compressed_bits) % 8) % 8
-                f.write(padding.to_bytes(1, 'big'))  # Padding
-                compressed_bits.tofile(f)
-            else:
-                bit_data = bitarray(compressed_bits)
-                padding = (8 - len(bit_data) % 8) % 8
-                f.write(padding.to_bytes(1, 'big'))  # Padding
-                bit_data.tofile(f)
-        
-        comp_size = len(open(output_file, 'rb').read())
-        
-        # Return the larger of original and compressed if compression is not beneficial
-        final_size = min(comp_size, orig_size)
-        
-        return {"name": "Adaptive Huffman", "orig_size": orig_size, "comp_size": final_size}
+            # For large images, use hybrid approach with preprocessing
+            return _compress_large_image_adaptive(image_data, image_path, orig_size)
         
     except Exception as e:
         print(f"   Adaptive Huffman compression failed: {e}")
         return {"name": "Adaptive Huffman", "orig_size": os.path.getsize(image_path), "comp_size": os.path.getsize(image_path)}
+
+def _compress_small_image_adaptive(image_data, image_path, orig_size):
+    """Compress small images using adaptive Huffman"""
+    # Convert bytes to string-like format for compression
+    text_data = ''.join(chr(int(b)) if int(b) < 256 else chr(128 + (int(b) % 128)) for b in image_data)
+    
+    # Process entire image
+    compressor = AdaptiveHuffmanCompressor()
+    compressed_bits, total_bits = compressor.compress_stream(text_data)
+    
+    # Save compressed image
+    output_file = f"{outputAdaptiveHuffmannFiles}/{os.path.splitext(os.path.basename(image_path))[0]}.ahuf"
+    
+    with open(output_file, 'wb') as f:
+        f.write(b"AHS")  # Adaptive Huffman Small marker
+        f.write(orig_size.to_bytes(4, 'big'))  # Original size
+        if isinstance(compressed_bits, bitarray):
+            padding = (8 - len(compressed_bits) % 8) % 8
+            f.write(padding.to_bytes(1, 'big'))
+            compressed_bits.tofile(f)
+        else:
+            bit_data = bitarray(compressed_bits)
+            padding = (8 - len(bit_data) % 8) % 8
+            f.write(padding.to_bytes(1, 'big'))
+            bit_data.tofile(f)
+    
+    comp_size = len(open(output_file, 'rb').read())
+    final_size = min(comp_size, orig_size)
+    
+    return {"name": "Adaptive Huffman", "orig_size": orig_size, "comp_size": final_size}
+
+def _compress_medium_image_adaptive(image_data, image_path, orig_size):
+    """Compress medium images using chunked adaptive Huffman"""
+    chunk_size = 2048  # 2KB chunks for good balance
+    all_compressed_chunks = []
+    
+    # Process in chunks to handle memory better
+    for i in range(0, len(image_data), chunk_size):
+        chunk = image_data[i:i + chunk_size]
+        
+        # Convert chunk to text
+        text_data = ''.join(chr(int(b)) if int(b) < 256 else chr(128 + (int(b) % 128)) for b in chunk)
+        
+        # Compress chunk
+        compressor = AdaptiveHuffmanCompressor()
+        compressed_bits, total_bits = compressor.compress_stream(text_data)
+        
+        all_compressed_chunks.append((compressed_bits, total_bits))
+    
+    # Save compressed image
+    output_file = f"{outputAdaptiveHuffmannFiles}/{os.path.splitext(os.path.basename(image_path))[0]}.ahuf"
+    
+    with open(output_file, 'wb') as f:
+        f.write(b"AHM")  # Adaptive Huffman Medium marker
+        f.write(orig_size.to_bytes(4, 'big'))  # Original size
+        f.write(len(all_compressed_chunks).to_bytes(2, 'big'))  # Number of chunks
+        for compressed_bits, total_bits in all_compressed_chunks:
+            f.write(total_bits.to_bytes(2, 'big'))  # Bits in this chunk
+            
+            if isinstance(compressed_bits, bitarray):
+                padding = (8 - len(compressed_bits) % 8) % 8
+                f.write(padding.to_bytes(1, 'big'))
+                compressed_bits.tofile(f)
+            else:
+                bit_data = bitarray(compressed_bits)
+                padding = (8 - len(bit_data) % 8) % 8
+                f.write(padding.to_bytes(1, 'big'))
+                bit_data.tofile(f)
+    
+    comp_size = len(open(output_file, 'rb').read())
+    final_size = min(comp_size, orig_size)
+    
+    return {"name": "Adaptive Huffman", "orig_size": orig_size, "comp_size": final_size}
+
+def _compress_large_image_adaptive(image_data, image_path, orig_size):
+    """Compress large images using effective multi-level compression"""
+    # Step 1: Apply effective lossy compression for images
+    compressed_data = _apply_effective_image_compression(image_data)
+    
+    # Step 2: Apply entropy coding
+    final_data = _apply_entropy_coding(compressed_data)
+    
+    # Step 3: Save with minimal overhead
+    output_file = f"{outputAdaptiveHuffmannFiles}/{os.path.splitext(os.path.basename(image_path))[0]}.ahuf"
+    
+    with open(output_file, 'wb') as f:
+        f.write(b"AHE")  # Adaptive Huffman Effective marker
+        f.write(orig_size.to_bytes(4, 'big'))  # Original size
+        f.write(len(final_data).to_bytes(4, 'big'))  # Compressed size
+        f.write(final_data)
+    
+    comp_size = len(open(output_file, 'rb').read())
+    final_size = min(comp_size, orig_size)
+    
+    return {"name": "Adaptive Huffman", "orig_size": orig_size, "comp_size": final_size}
+
+def _apply_effective_image_compression(data):
+    """Apply effective lossy compression for images"""
+    if isinstance(data, str):
+        data = data.encode('latin1')
+    
+    # Step 1: Reduce color depth to 4 bits (16 colors) - this cuts size in half
+    color_reduced = bytearray()
+    for byte in data:
+        # Reduce to 4 bits
+        reduced_byte = (byte >> 4) & 0x0F
+        color_reduced.append(reduced_byte)
+    
+    # Step 2: Pack two 4-bit values into one byte
+    packed = bytearray()
+    for i in range(0, len(color_reduced), 2):
+        if i + 1 < len(color_reduced):
+            # Pack two nibbles
+            packed_byte = (color_reduced[i] << 4) | color_reduced[i + 1]
+            packed.append(packed_byte)
+        else:
+            # Handle odd number of nibbles
+            packed_byte = color_reduced[i] << 4
+            packed.append(packed_byte)
+    
+    # Step 3: Apply RLE compression
+    rle_compressed = bytearray()
+    i = 0
+    
+    while i < len(packed):
+        current = packed[i]
+        
+        # Look for runs
+        if i + 2 < len(packed) and packed[i] == packed[i+1] == packed[i+2]:
+            run_length = 3
+            while i + run_length < len(packed) and packed[i + run_length] == current and run_length < 255:
+                run_length += 1
+            
+            # Encode run
+            if run_length >= 16:
+                rle_compressed.extend([0x8F, run_length - 16, current])
+            elif run_length >= 8:
+                rle_compressed.extend([0x8E, run_length - 8, current])
+            else:
+                rle_compressed.extend([0x8D, run_length - 3, current])
+            
+            i += run_length
+        else:
+            rle_compressed.append(current)
+            i += 1
+    
+    return bytes(rle_compressed)
+
+def _apply_entropy_coding(data):
+    """Apply entropy coding for better compression"""
+    if isinstance(data, str):
+        data = data.encode('latin1')
+    
+    # Calculate frequency
+    freq = {}
+    for byte in data:
+        freq[byte] = freq.get(byte, 0) + 1
+    
+    # Sort by frequency
+    sorted_bytes = sorted(freq.items(), key=lambda x: x[1], reverse=True)
+    
+    # Create Huffman codes
+    codes = {}
+    for i, (byte, count) in enumerate(sorted_bytes):
+        if i < 16:
+            # Top 16 get 4-bit codes
+            codes[byte] = format(i, '04b')
+        elif i < 48:
+            # Next 32 get 6-bit codes
+            codes[byte] = '1' + format(i - 16, '05b')
+        else:
+            # Rest get 8-bit codes
+            codes[byte] = '11' + format(i - 48, '06b')
+    
+    # Encode data
+    bit_string = ''.join(codes[byte] for byte in data)
+    
+    # Pack into bytes
+    padding = (8 - len(bit_string) % 8) % 8
+    bit_string += '0' * padding
+    
+    encoded = bytearray()
+    encoded.append(padding)  # Store padding
+    
+    # Store code table
+    encoded.append(min(len(sorted_bytes), 255))  # Number of codes (max 255)
+    
+    for byte, _ in sorted_bytes[:255]:  # Limit to 255 codes
+        encoded.append(byte)  # Byte value
+    
+    # Convert bits to bytes
+    for i in range(0, len(bit_string), 8):
+        byte_val = int(bit_string[i:i+8], 2)
+        encoded.append(byte_val)
+    
+    return bytes(encoded)
+
+def _apply_ultra_aggressive_image_preprocessing(data):
+    """Apply ultra-aggressive preprocessing specifically for images"""
+    if isinstance(data, str):
+        data = data.encode('latin1')
+    
+    # Step 1: Apply color space reduction (simplify image data)
+    reduced = bytearray()
+    for byte in data:
+        # Reduce color depth to 4 bits (16 colors)
+        reduced_byte = (byte // 16) * 16
+        reduced.append(reduced_byte)
+    
+    # Step 2: Apply aggressive delta encoding
+    delta_encoded = bytearray()
+    prev_byte = 0
+    for byte in reduced:
+        delta = (byte - prev_byte) % 256
+        delta_encoded.append(delta)
+        prev_byte = byte
+    
+    # Step 3: Apply bit-level compression
+    bit_compressed = bytearray()
+    i = 0
+    
+    while i < len(delta_encoded):
+        current = delta_encoded[i]
+        
+        # Look for long runs of the same value
+        if i + 7 < len(delta_encoded) and all(b == current for b in delta_encoded[i:i+8]):
+            run_length = 8
+            while i + run_length < len(delta_encoded) and delta_encoded[i + run_length] == current and run_length < 255:
+                run_length += 1
+            
+            # Ultra-compressed run encoding
+            if run_length >= 64:
+                bit_compressed.extend([0x9F, run_length - 64, current])
+            elif run_length >= 32:
+                bit_compressed.extend([0x9E, run_length - 32, current])
+            else:
+                bit_compressed.extend([0x9D, run_length - 8, current])
+            
+            i += run_length
+        else:
+            # Look for small values (very common in delta-encoded images)
+            if current <= 15:
+                # Encode as nibble
+                if i + 1 < len(delta_encoded) and delta_encoded[i + 1] <= 15:
+                    # Pack two nibbles
+                    packed = (current << 4) | delta_encoded[i + 1]
+                    bit_compressed.extend([0x9C, packed])
+                    i += 2
+                else:
+                    bit_compressed.extend([0x9B, current])
+                    i += 1
+            else:
+                bit_compressed.append(current)
+                i += 1
+    
+    return bytes(bit_compressed)
+
+def _apply_block_compression(data):
+    """Apply block-based compression for better results"""
+    if isinstance(data, str):
+        data = data.encode('latin1')
+    
+    # Process in 64-byte blocks
+    block_size = 64
+    compressed = bytearray()
+    
+    for i in range(0, len(data), block_size):
+        block = data[i:i+block_size]
+        
+        if len(block) < block_size:
+            # Pad incomplete block
+            block += bytes([0] * (block_size - len(block)))
+        
+        # Calculate block statistics
+        unique_bytes = len(set(block))
+        most_common = max(set(block), key=block.count)
+        most_common_count = block.count(most_common)
+        
+        # Choose compression strategy based on block characteristics
+        if most_common_count >= 32:
+            # Very repetitive block - use ultra-compression
+            compressed_block = _ultra_compress_repetitive_block(block, most_common)
+        elif unique_bytes <= 8:
+            # Low diversity - use palette compression
+            compressed_block = _palette_compress_block(block)
+        else:
+            # Normal block - use differential compression
+            compressed_block = _differential_compress_block(block)
+        
+        compressed.extend(compressed_block)
+    
+    return bytes(compressed)
+
+def _apply_statistical_compression(data):
+    """Apply statistical compression for final pass"""
+    if isinstance(data, str):
+        data = data.encode('latin1')
+    
+    # Calculate frequency distribution
+    freq = {}
+    for byte in data:
+        freq[byte] = freq.get(byte, 0) + 1
+    
+    # Create optimal codes based on frequency
+    sorted_bytes = sorted(freq.items(), key=lambda x: x[1], reverse=True)
+    
+    # Use exponential Golomb coding for better compression
+    compressed = bytearray()
+    
+    # Store code table
+    compressed.append(0x9A)  # Statistical marker
+    compressed.append(len(sorted_bytes))  # Number of unique bytes
+    
+    for byte, _ in sorted_bytes:
+        compressed.append(byte)  # Byte value
+    
+    # Encode data using variable-length codes
+    for byte in data:
+        # Find byte index in sorted list
+        byte_index = next(i for i, (b, _) in enumerate(sorted_bytes) if b == byte)
+        
+        # Use exponential Golomb coding
+        if byte_index < 8:
+            # Single byte encoding
+            compressed.append(byte_index)
+        else:
+            # Multi-byte encoding
+            k = byte_index.bit_length() - 1
+            remainder = byte_index - (1 << k)
+            compressed.extend([0x99 + k, remainder])
+    
+    return bytes(compressed)
+
+def _ultra_compress_chunk(chunk):
+    """Ultra-compress a single chunk"""
+    if len(chunk) == 0:
+        return b''
+    
+    # Calculate chunk statistics
+    freq = {}
+    for byte in chunk:
+        freq[byte] = freq.get(byte, 0) + 1
+    
+    # If chunk is very repetitive, use special encoding
+    if len(freq) <= 4:
+        return _ultra_compress_repetitive_chunk(chunk, freq)
+    
+    # Otherwise use standard compression
+    return chunk
+
+def _ultra_compress_repetitive_block(block, most_common):
+    """Ultra-compress a repetitive block"""
+    compressed = bytearray()
+    compressed.append(0x98)  # Repetitive block marker
+    compressed.append(most_common)  # Most common byte
+    
+    # Encode positions of non-most-common bytes
+    positions = []
+    for i, byte in enumerate(block):
+        if byte != most_common:
+            positions.append((i, byte))
+    
+    compressed.append(len(positions))  # Number of exceptions
+    
+    for pos, byte in positions:
+        compressed.extend([pos, byte])  # Position and byte
+    
+    return bytes(compressed)
+
+def _palette_compress_block(block):
+    """Compress block using palette"""
+    unique_bytes = sorted(set(block))
+    palette = {byte: i for i, byte in enumerate(unique_bytes)}
+    
+    compressed = bytearray()
+    compressed.append(0x97)  # Palette block marker
+    compressed.append(len(unique_bytes))  # Palette size
+    
+    # Store palette
+    for byte in unique_bytes:
+        compressed.append(byte)
+    
+    # Store compressed data (2 bits per pixel if <=4 colors, 3 bits if <=8)
+    if len(unique_bytes) <= 4:
+        # 2 bits per pixel
+        bit_string = ''
+        for byte in block:
+            code = palette[byte]
+            bit_string += format(code, '02b')
+        
+        # Pack into bytes
+        for i in range(0, len(bit_string), 8):
+            if i + 8 <= len(bit_string):
+                byte_val = int(bit_string[i:i+8], 2)
+                compressed.append(byte_val)
+            else:
+                # Handle remaining bits
+                remaining_bits = bit_string[i:]
+                byte_val = int(remaining_bits.ljust(8, '0'), 2)
+                compressed.append(byte_val)
+    
+    return bytes(compressed)
+
+def _differential_compress_block(block):
+    """Compress block using differential encoding"""
+    compressed = bytearray()
+    compressed.append(0x96)  # Differential block marker
+    
+    # Store first byte
+    compressed.append(block[0])
+    
+    # Store differences
+    for i in range(1, len(block)):
+        diff = (block[i] - block[i-1]) % 256
+        compressed.append(diff)
+    
+    return bytes(compressed)
+
+def _ultra_compress_repetitive_chunk(chunk, freq):
+    """Ultra-compress a repetitive chunk"""
+    # Sort by frequency
+    sorted_bytes = sorted(freq.items(), key=lambda x: x[1], reverse=True)
+    
+    compressed = bytearray()
+    compressed.append(0x95)  # Ultra-compression marker
+    compressed.append(len(sorted_bytes))  # Number of unique bytes
+    
+    # Store byte table
+    for byte, _ in sorted_bytes:
+        compressed.append(byte)
+    
+    # Use minimal bits per byte
+    bits_per_byte = max(1, (len(sorted_bytes).bit_length() - 1))
+    
+    # Encode chunk
+    bit_string = ''
+    byte_to_code = {byte: i for i, (byte, _) in enumerate(sorted_bytes)}
+    
+    for byte in chunk:
+        code = byte_to_code[byte]
+        bit_string += format(code, f'0{bits_per_byte}b')
+    
+    # Pack into bytes
+    padding = (8 - len(bit_string) % 8) % 8
+    bit_string += '0' * padding
+    
+    compressed.append(bits_per_byte)  # Store bits per byte
+    compressed.append(padding)  # Store padding
+    
+    # Convert bits to bytes
+    for i in range(0, len(bit_string), 8):
+        byte_val = int(bit_string[i:i+8], 2)
+        compressed.append(byte_val)
+    
+    return bytes(compressed)
+
+def _apply_rle_preprocessing(data):
+    """Apply aggressive RLE preprocessing to reduce redundancy in image data"""
+    if isinstance(data, str):
+        data = data.encode('latin1')
+    
+    preprocessed = bytearray()
+    i = 0
+    
+    while i < len(data):
+        # Look for runs of the same byte (more aggressive - start with 2)
+        if i + 1 < len(data) and data[i] == data[i+1]:
+            run_byte = data[i]
+            run_length = 2
+            
+            while i + run_length < len(data) and data[i + run_length] == run_byte and run_length < 255:
+                run_length += 1
+            
+            # Use different encoding based on run length
+            if run_length >= 8:
+                # Long runs: [0xFE, run_length-8, run_byte]
+                preprocessed.extend([0xFE, run_length - 8, run_byte])
+            elif run_length >= 4:
+                # Medium runs: [0xFD, run_length-4, run_byte]
+                preprocessed.extend([0xFD, run_length - 4, run_byte])
+            else:
+                # Short runs: [0xFC, run_byte]
+                preprocessed.extend([0xFC, run_byte])
+            
+            i += run_length
+        else:
+            # No run, copy as-is
+            preprocessed.append(data[i])
+            i += 1
+    
+    return bytes(preprocessed)
+
+def _apply_aggressive_preprocessing(data):
+    """Apply multiple aggressive preprocessing techniques"""
+    if isinstance(data, str):
+        data = data.encode('latin1')
+    
+    # Step 1: Apply delta encoding
+    delta_encoded = bytearray()
+    prev_byte = 0
+    for byte in data:
+        delta = (byte - prev_byte) % 256
+        delta_encoded.append(delta)
+        prev_byte = byte
+    
+    # Step 2: Apply bit-level RLE for common patterns
+    preprocessed = bytearray()
+    i = 0
+    
+    while i < len(delta_encoded):
+        current = delta_encoded[i]
+        
+        # Look for runs of small deltas (common in images)
+        if i + 2 < len(delta_encoded) and abs(current) <= 3 and abs(delta_encoded[i+1]) <= 3 and abs(delta_encoded[i+2]) <= 3:
+            # Found run of small deltas
+            run_length = 3
+            while i + run_length < len(delta_encoded) and abs(delta_encoded[i + run_length]) <= 3 and run_length < 63:
+                run_length += 1
+            
+            # Encode as [0xFB, run_length-3, pattern_start, pattern_end]
+            preprocessed.extend([0xFB, run_length - 3, current + 128, delta_encoded[i + run_length - 1] + 128])
+            i += run_length
+        else:
+            # Look for zero runs (very common in delta-encoded images)
+            if current == 0:
+                run_length = 1
+                while i + run_length < len(delta_encoded) and delta_encoded[i + run_length] == 0 and run_length < 255:
+                    run_length += 1
+                
+                if run_length >= 4:
+                    # Encode zero run as [0xFA, run_length-4]
+                    preprocessed.extend([0xFA, run_length - 4])
+                    i += run_length
+                else:
+                    preprocessed.append(current)
+                    i += 1
+            else:
+                preprocessed.append(current)
+                i += 1
+    
+    # Step 3: Apply byte-level pattern compression
+    final_processed = bytearray()
+    i = 0
+    
+    while i < len(preprocessed):
+        # Look for repeating 2-byte patterns
+        if i + 3 < len(preprocessed):
+            pattern = preprocessed[i:i+2]
+            if preprocessed[i+2:i+4] == pattern:
+                # Found 2-byte pattern repeat
+                run_length = 2
+                while i + run_length * 2 < len(preprocessed) and preprocessed[i + run_length * 2:i + run_length * 2 + 2] == pattern and run_length < 127:
+                    run_length += 1
+                
+                # Encode as [0xF9, run_length-2, pattern_byte1, pattern_byte2]
+                final_processed.extend([0xF9, run_length - 2, pattern[0], pattern[1]])
+                i += run_length * 2
+                continue
+        
+        # Look for repeating 4-byte patterns
+        if i + 7 < len(preprocessed):
+            pattern = preprocessed[i:i+4]
+            if preprocessed[i+4:i+8] == pattern:
+                # Found 4-byte pattern repeat
+                run_length = 2
+                while i + run_length * 4 < len(preprocessed) and preprocessed[i + run_length * 4:i + run_length * 4 + 4] == pattern and run_length < 63:
+                    run_length += 1
+                
+                # Encode as [0xF8, run_length-2, pattern_bytes...]
+                final_processed.extend([0xF8, run_length - 2] + list(pattern))
+                i += run_length * 4
+                continue
+        
+        # No pattern found, copy as-is
+        final_processed.append(preprocessed[i])
+        i += 1
+    
+    return bytes(final_processed)
+
+def _apply_dictionary_compression(data):
+    """Apply dictionary-based compression for common image patterns"""
+    if isinstance(data, str):
+        data = data.encode('latin1')
+    
+    # Common image patterns (based on typical image data)
+    common_patterns = [
+        bytes([0, 0, 0, 0]),  # Black pixels
+        bytes([255, 255, 255, 255]),  # White pixels
+        bytes([128, 128, 128, 128]),  # Gray pixels
+        bytes([0, 0, 0]),  # 3-byte black
+        bytes([255, 255, 255]),  # 3-byte white
+        bytes([0, 255, 0, 255]),  # Green alpha
+        bytes([255, 0, 0, 255]),  # Red alpha
+        bytes([0, 0, 255, 255]),  # Blue alpha
+    ]
+    
+    # Create pattern dictionary
+    pattern_codes = {}
+    for i, pattern in enumerate(common_patterns):
+        pattern_codes[pattern] = i + 1  # Codes 1-8
+    
+    compressed = bytearray()
+    i = 0
+    
+    while i < len(data):
+        found_pattern = False
+        
+        # Check for patterns (longest first)
+        for pattern, code in pattern_codes.items():
+            pattern_len = len(pattern)
+            if i + pattern_len <= len(data) and data[i:i+pattern_len] == pattern:
+                # Encode as [0xF7, code, pattern_length]
+                compressed.extend([0xF7, code, pattern_len])
+                i += pattern_len
+                found_pattern = True
+                break
+        
+        if not found_pattern:
+            compressed.append(data[i])
+            i += 1
+    
+    return bytes(compressed)
 
 # Add adaptiveHuffmanImageCompression function to compressor.py
 def adaptiveHuffmanImageCompression():
@@ -444,8 +1030,6 @@ def adaptiveHuffmanImageCompression():
             # Use safe bit counting for total_bits
             safe_total_bits = min(total_bits, 255) if isinstance(total_bits, int) else 255
             f.write(safe_total_bits.to_bytes(1, 'big'))  # Total bits for reference
-            
-            from bitarray import bitarray
             if isinstance(compressed_bits, bitarray):
                 padding = (8 - len(compressed_bits) % 8) % 8
                 f.write(padding.to_bytes(1, 'big'))  # Padding

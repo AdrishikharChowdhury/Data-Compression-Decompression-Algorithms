@@ -79,7 +79,7 @@ def compare_all_image_techniques_with_choice():
     print(f"{'Algorithm':<20} {'Original':<12} {'Compressed':<12} {'Space Saved':<12} {'Rank'}")
     print("-" * 80)
     
-    medals = ["", "", ""]
+    medals = ["1st", "2nd", "3rd"]
     for i, result in enumerate(results):
         orig_size = result['orig_size']
         comp_size = result['comp_size']
@@ -88,7 +88,7 @@ def compare_all_image_techniques_with_choice():
         else:
             space_saved = f"{((orig_size - comp_size) / orig_size * 100):.1f}"
         
-        rank = medals[i] if i < len(medals) else f"{i+1}"
+        rank = medals[i] if i < len(medals) else f"{i+1}th"
         print(f"{result['name']:<20} {orig_size:<12,} {comp_size:<12,} {space_saved:<10}% {rank}")
     
     print("-" * 80)

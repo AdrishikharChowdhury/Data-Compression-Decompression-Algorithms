@@ -109,14 +109,4 @@ def compare_all_techniques_with_choice():
         print(f"{r['name']:<20} {r['orig_size']:<12} {r['comp_size']:<12} {compression_ratio:<11.1f}%{rank_symbol}")
     
     print("=" * 80)
-    print(f"{'Algorithm':<20} {'Original':<12} {'Compressed':<12} {'Space Saved':<12} {'Rank'}")
-    print("-" * 80)
-    
-    for i, r in enumerate(results, 1):
-        compression_ratio = r["savings"]
-        rank_emoji = "" if i == 1 else "" if i == 2 else ""
-        print(f"{r['name']:<20} {r['orig_size']:<12} {r['comp_size']:<12} "
-              f"{compression_ratio:<11.1f}% {rank_emoji}")
-    
-    print("-" * 80)
     print(f"\n Best performing technique: {results[0]['name']} with {results[0]['savings']:.1f}% compression\n")

@@ -6,6 +6,7 @@ import glob
 from shanonfanofunctions import _run_shannon_fano,shannonImageCompression
 from huffmanFunctions import huffmanImageCompression
 from adaptiveHuffmanfunctions import adaptiveHuffmanImageCompression
+from audio_compression import AudioCompressor
 
 # File paths
 filePath = "./files"
@@ -20,6 +21,15 @@ os.makedirs(inputFiles, exist_ok=True)
 os.makedirs(outputHuffmanFiles, exist_ok=True)
 os.makedirs(outputShannonFiles, exist_ok=True)
 os.makedirs(outputAdaptiveHuffmanFiles, exist_ok=True)
+
+# Audio compression directories (will be created automatically by AudioCompressor)
+# Each algorithm has its own folder:
+# - huffman_audio/ (*.huff)
+# - adaptive_huffman_audio/ (*.ahuff)
+# - shannon_fano_audio/ (*.sf)
+# - delta_audio/ (*.delta)
+# - dpcm_audio/ (*.dpcm)
+# - adaptive_quant_audio/ (*.adaptive)
 
 def selectTextFile():
     """Select a text file for compression"""
@@ -575,6 +585,175 @@ def imageFileChoice():
         except ValueError:
             print("Invalid input. Please enter a number.")
 
+def selectAudioFile():
+    """Select an audio file for compression (supports .wav, .ogg, .mp3)"""
+    print("\n Available audio files:")
+    audio_extensions = ['*.wav', '*.ogg', '*.mp3']
+    available_files = []
+    
+    for ext in audio_extensions:
+        available_files.extend(glob.glob(f"{inputFiles}/*{ext}"))
+        available_files.extend(glob.glob(f"{inputFiles}/*{ext.upper()}"))
+    
+    if not available_files:
+        print("No audio files found in inputs folder.")
+        print("Supported formats: .wav, .ogg, .mp3")
+        print(f"Place audio files in: {inputFiles}")
+        return None
+    
+    # Remove duplicates and sort
+    available_files = list(set(available_files))
+    available_files.sort()
+    
+    print(f"\nFound {len(available_files)} audio file(s):")
+    print("\n  [RECOMMENDED: Use WAV files for best compression results]")
+    print("  [MP3/OGG are already compressed and won't compress further]\n")
+    
+    for i, file in enumerate(available_files, 1):
+        size = os.path.getsize(file)
+        ext = os.path.splitext(file)[1].upper()
+        # Mark compressed formats
+        is_compressed = ext.lower() in ['.mp3', '.ogg', '.aac', '.flac']
+        marker = " [ALREADY COMPRESSED]" if is_compressed else " [✓ GOOD FOR COMPRESSION]"
+        print(f"{i}. {os.path.basename(file)} ({size:,} bytes) [{ext}]{marker}")
+    
+    try:
+        choice = int(input("\nSelect audio file (number): ")) - 1
+        if 0 <= choice < len(available_files):
+            selected_file = available_files[choice]
+            print(f"Selected: {os.path.basename(selected_file)}")
+            return selected_file
+        else:
+            print("Invalid selection")
+            return None
+    except ValueError:
+        print("Please enter a valid number")
+        return None
+
+def compressAudioFile(algorithm):
+    """Compress audio file with specified algorithm"""
+    selected_file = selectAudioFile()
+    if selected_file is None:
+        return
+    
+    print(f"\n  Compressing {os.path.basename(selected_file)} with {algorithm.upper()}...")
+    
+    # Initialize compressor with base output directory
+    compressor = AudioCompressor(base_output_dir=outputFiles)
+    
+    try:
+        # Compress audio - output path is auto-generated
+        stats = compressor.compress_audio(selected_file, algorithm=algorithm)
+        
+        # Get the actual output path from stats or compressor
+        output_path = list(compressor.compression_stats.keys())[-1] if compressor.compression_stats else "Unknown"
+        
+        print(f"\n {algorithm.upper()} compression completed!")
+        print(f"   Original: {stats['original_size']:,} bytes")
+        print(f"   Compressed: {stats['compressed_size']:,} bytes")
+        print(f"   Compression Ratio: {stats['compression_ratio']:.2f}x")
+        print(f"   PSNR: {stats['psnr']:.2f} dB")
+        print(f"   Duration: {stats['duration']:.2f} seconds")
+        print(f"   Output: {output_path}")
+        
+    except Exception as e:
+        print(f" Error during {algorithm} compression: {e}")
+        import traceback
+        traceback.print_exc()
+
+def compareAllAudioTechniques():
+    """Compare all audio compression algorithms with table output"""
+    selected_file = selectAudioFile()
+    if selected_file is None:
+        return
+    
+    original_size = os.path.getsize(selected_file)
+    print(f"\n  Comparing all techniques on {os.path.basename(selected_file)}...")
+    
+    # Warn about compressed file formats
+    file_ext = os.path.splitext(selected_file)[1].lower()
+    if file_ext in ['.mp3', '.ogg', '.aac', '.flac']:
+        print("\n  ⚠️  NOTE: This is an already-compressed audio format.")
+        print("     Compression may take longer and files may become LARGER.")
+        print("     For best results, use uncompressed WAV files.\n")
+    
+    compressor = AudioCompressor(base_output_dir=outputFiles)
+    results = compressor.compare_algorithms(selected_file, outputFiles)
+    
+    # Prepare results list for table
+    table_results = []
+    for algorithm, stats in results.items():
+        if 'error' not in stats:
+            # Calculate space saved correctly: (1 - compressed/original) * 100
+            if stats['original_size'] > 0:
+                space_saved = (1 - stats['compressed_size'] / stats['original_size']) * 100
+            else:
+                space_saved = 0
+            table_results.append({
+                'name': algorithm.upper(),
+                'orig_size': stats['original_size'],
+                'comp_size': stats['compressed_size'],
+                'savings': space_saved
+            })
+    
+    # Sort by space saved (best first)
+    table_results.sort(key=lambda x: x['savings'], reverse=True)
+    
+    # Print table (matching image and text format)
+    print(f"\n Results for {os.path.basename(selected_file)}:")
+    print("=" * 80)
+    print(f"{'Algorithm':<20} {'Original':<12} {'Compressed':<12} {'Space Saved':<12} {'Rank'}")
+    print("=" * 80)
+    
+    medals = ["1st", "2nd", "3rd"]
+    for i, result in enumerate(table_results):
+        rank = medals[i] if i < len(medals) else f"{i+1}th"
+        # Format space saved - show as "LARGER" when negative
+        if result['savings'] < 0:
+            space_str = f"LARGER({abs(result['savings']):.1f}%)"
+        else:
+            space_str = f"{result['savings']:.1f}%"
+        print(f"{result['name']:<20} {result['orig_size']:<12,} {result['comp_size']:<12,} {space_str:<12} {rank}")
+    
+    print("=" * 80)
+    
+    # Check if files got larger
+    all_larger = all(r['savings'] < 0 for r in table_results)
+    if all_larger:
+        print("\n⚠️  WARNING: All compressed files are LARGER than original!")
+        print("   This happens with already-compressed files (MP3, JPG, etc.)")
+        print("   These algorithms work best on uncompressed data (WAV, BMP, TXT).\n")
+    elif table_results:
+        print(f"\n Best performing technique: {table_results[0]['name']} with {table_results[0]['savings']:.1f}% compression\n")
+
+def audioFileChoice():
+    """Handle audio file compression (Huffman, Adaptive Huffman, Shannon-Fano)"""
+    while True:
+        print("\n--- Audio File Menu ---")
+        print("1. Huffman Compression (.huff)")
+        print("2. Adaptive Huffman Compression (.ahuff)")
+        print("3. Shannon-Fano Compression (.sf)")
+        print("4. Compare All Techniques")
+        print("5. Back to Main Menu")
+        
+        try:
+            choice = int(input("Your choice: "))
+            
+            if choice == 1:
+                compressAudioFile("huffman")
+            elif choice == 2:
+                compressAudioFile("adaptive_huffman")
+            elif choice == 3:
+                compressAudioFile("shannon_fano")
+            elif choice == 4:
+                compareAllAudioTechniques()
+            elif choice == 5:
+                return
+            else:
+                print("Invalid choice. Please try again.")
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+
 def main():
     while True:
         print("Choose the file type:")
@@ -589,7 +768,7 @@ def main():
             elif choice == 2:
                 imageFileChoice()
             elif choice==3:
-                print("Not yet implemented")
+                audioFileChoice()
             elif choice == 4:
                 print("Thank you for using this program")
                 break
