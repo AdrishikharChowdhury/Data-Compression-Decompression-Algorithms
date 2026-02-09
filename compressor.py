@@ -93,13 +93,22 @@ def compare_all_techniques_with_choice():
     # Calculate savings
     for r in results:
         r["savings"] = (1 - r["comp_size"] / r["orig_size"]) * 100
-
+    
     # Sort by best savings
     results.sort(key=lambda x: x["savings"], reverse=True)
-
+    
     # Print table
     print(f"\n Results for {os.path.basename(selected_file)}:")
-    print("-" * 80)
+    print("=" * 80)
+    print(f"{'Algorithm':<20} {'Original':<12} {'Compressed':<12} {'Space Saved':<12} {'Rank'}")
+    print("=" * 80)
+    
+    for i, r in enumerate(results, 1):
+        compression_ratio = r["savings"]
+        rank_symbol = "1st" if i == 1 else "2nd" if i == 2 else "3rd"
+        print(f"{r['name']:<20} {r['orig_size']:<12} {r['comp_size']:<12} {compression_ratio:<11.1f}%{rank_symbol}")
+    
+    print("=" * 80)
     print(f"{'Algorithm':<20} {'Original':<12} {'Compressed':<12} {'Space Saved':<12} {'Rank'}")
     print("-" * 80)
     

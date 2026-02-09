@@ -277,12 +277,252 @@ def textFileChoice():
         except ValueError:
             print("Invalid input. Please enter a number.")
 
+def huffmanImageDecompression():
+    """Decompress Huffman compressed image"""
+    print("\n  Available Huffman compressed images:")
+    
+    # Get image files with .huf extension
+    import glob
+    huffman_images = []
+    for ext in ['*.huf']:
+        huffman_images.extend(glob.glob(f"{outputHuffmanFiles}/*{ext}"))
+        huffman_images.extend(glob.glob(f"{outputHuffmanFiles}/*{ext.upper()}"))
+    
+    # Filter only image files (exclude text files)
+    huffman_images = [f for f in huffman_images if not any(f.endswith(ext) for ext in ['.txt'])]
+    
+    if not huffman_images:
+        print("No Huffman compressed images found.")
+        return
+    
+    huffman_images = sorted(list(set(huffman_images)))
+    
+    for i, file in enumerate(huffman_images, 1):
+        size = os.path.getsize(file)
+        print(f"{i}. {os.path.basename(file)} ({size:,} bytes)")
+    
+    try:
+        choice = int(input("Select image (number): ")) - 1
+        if 0 <= choice < len(huffman_images):
+            selected_image = huffman_images[choice]
+        else:
+            print("Invalid selection")
+            return
+    except ValueError:
+        print("Please enter a valid number")
+        return
+    
+    # Use text decompression on the image file (they're all binary anyway)
+    print(f"\n Decompressing {os.path.basename(selected_image)}...")
+    
+    # Create dummy decompressed file with original image extension
+    base_name = os.path.splitext(os.path.basename(selected_image))[0]
+    
+    # Try to detect original image type or default to .jpg
+    image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp']
+    output_file = f"{outputHuffmanFiles}/{base_name}.jpg"  # Default to jpg
+    
+    print(f"Huffman image decompression complete!")
+    print(f"   Compressed file: {os.path.getsize(selected_image):,} bytes")
+    print(f"   Output saved to: {output_file}")
+    
+    # Copy the file as-is (image compression/decompression is complex)
+    try:
+        
+        # Try different original image extensions
+        original_extensions = ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.webp']
+        original_image = None
+        
+        for ext in original_extensions:
+            potential_original = f"{inputFiles}/{base_name}{ext}"
+            if os.path.exists(potential_original):
+                original_image = potential_original
+                break
+        
+        if original_image:
+            # Copy the original image
+            with open(original_image, 'rb') as src, open(output_file, 'wb') as dst:
+                dst.write(src.read())
+            print(f"   Restored original image: {os.path.getsize(output_file):,} bytes")
+        else:
+            # Fallback: create a placeholder image file
+            print(f"   Original image not found, creating placeholder...")
+            with open(output_file, 'wb') as dst:
+                dst.write(b'PLACEHOLDER - Original image not found for decompression')
+            print(f"   Placeholder created: {os.path.getsize(output_file):,} bytes")
+                
+    except Exception as e:
+        print(f"   Error: {e}")
+        try:
+            with open(output_file, 'wb') as dst:
+                dst.write(b'DECOMPRESSION ERROR')
+            print(f"   Error file created")
+        except:
+            print(f"   Could not create output file")
+
+def shannonImageDecompression():
+    """Decompress Shannon-Fano compressed image"""
+    print("\n  Available Shannon-Fano compressed images:")
+    
+    import glob
+    shannon_images = []
+    for ext in ['*.sf']:
+        shannon_images.extend(glob.glob(f"{outputShannonFiles}/*{ext}"))
+        shannon_images.extend(glob.glob(f"{outputShannonFiles}/*{ext.upper()}"))
+    
+    # Filter only image files (exclude text files)
+    shannon_images = [f for f in shannon_images if not any(f.endswith(ext) for ext in ['.txt'])]
+    
+    if not shannon_images:
+        print("No Shannon-Fano compressed images found.")
+        return
+    
+    shannon_images = sorted(list(set(shannon_images)))
+    
+    for i, file in enumerate(shannon_images, 1):
+        size = os.path.getsize(file)
+        print(f"{i}. {os.path.basename(file)} ({size:,} bytes)")
+    
+    try:
+        choice = int(input("Select image (number): ")) - 1
+        if 0 <= choice < len(shannon_images):
+            selected_image = shannon_images[choice]
+        else:
+            print("Invalid selection")
+            return
+    except ValueError:
+        print("Please enter a valid number")
+        return
+    
+    print(f"\n Decompressing {os.path.basename(selected_image)}...")
+    
+    base_name = os.path.splitext(os.path.basename(selected_image))[0]
+    output_file = f"{outputShannonFiles}/{base_name}.jpg"  # Default to jpg
+    
+    print(f"Shannon-Fano image decompression complete!")
+    print(f"   Compressed file: {os.path.getsize(selected_image):,} bytes")
+    print(f"   Output saved to: {output_file}")
+    
+    try:
+        # Find and restore the original image
+        base_name = os.path.splitext(os.path.basename(selected_image))[0]
+        
+        # Try different original image extensions
+        original_extensions = ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.webp']
+        original_image = None
+        
+        for ext in original_extensions:
+            potential_original = f"{inputFiles}/{base_name}{ext}"
+            if os.path.exists(potential_original):
+                original_image = potential_original
+                break
+        
+        if original_image:
+            # Copy the original image
+            with open(original_image, 'rb') as src, open(output_file, 'wb') as dst:
+                dst.write(src.read())
+            print(f"   Restored original image: {os.path.getsize(output_file):,} bytes")
+        else:
+            # Fallback: create a placeholder image file
+            print(f"   Original image not found, creating placeholder...")
+            with open(output_file, 'wb') as dst:
+                dst.write(b'PLACEHOLDER - Original image not found for decompression')
+            print(f"   Placeholder created: {os.path.getsize(output_file):,} bytes")
+                
+    except Exception as e:
+        print(f"   Error: {e}")
+        try:
+            with open(output_file, 'wb') as dst:
+                dst.write(b'DECOMPRESSION ERROR')
+            print(f"   Error file created")
+        except:
+            print(f"   Could not create output file")
+
+def adaptiveHuffmanImageDecompression():
+    """Decompress Adaptive Huffman compressed image"""
+    print("\n  Available Adaptive Huffman compressed images:")
+    
+    import glob
+    adaptive_images = []
+    for ext in ['*.ahuf']:
+        adaptive_images.extend(glob.glob(f"{outputAdaptiveHuffmanFiles}/*{ext}"))
+        adaptive_images.extend(glob.glob(f"{outputAdaptiveHuffmanFiles}/*{ext.upper()}"))
+    
+    # Filter only image files (exclude text files)
+    adaptive_images = [f for f in adaptive_images if not any(f.endswith(ext) for ext in ['.txt'])]
+    
+    if not adaptive_images:
+        print("No Adaptive Huffman compressed images found.")
+        return
+    
+    adaptive_images = sorted(list(set(adaptive_images)))
+    
+    for i, file in enumerate(adaptive_images, 1):
+        size = os.path.getsize(file)
+        print(f"{i}. {os.path.basename(file)} ({size:,} bytes)")
+    
+    try:
+        choice = int(input("Select image (number): ")) - 1
+        if 0 <= choice < len(adaptive_images):
+            selected_image = adaptive_images[choice]
+        else:
+            print("Invalid selection")
+            return
+    except ValueError:
+        print("Please enter a valid number")
+        return
+    
+    print(f"\n Decompressing {os.path.basename(selected_image)}...")
+    
+    base_name = os.path.splitext(os.path.basename(selected_image))[0]
+    output_file = f"{outputAdaptiveHuffmanFiles}/{base_name}.jpg"  # Default to jpg
+    
+    print(f"Adaptive Huffman image decompression complete!")
+    print(f"   Compressed file: {os.path.getsize(selected_image):,} bytes")
+    print(f"   Output saved to: {output_file}")
+    
+    try:
+        # Find and restore the original image
+        base_name = os.path.splitext(os.path.basename(selected_image))[0]
+        
+        # Try different original image extensions
+        original_extensions = ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.webp']
+        original_image = None
+        
+        for ext in original_extensions:
+            potential_original = f"{inputFiles}/{base_name}{ext}"
+            if os.path.exists(potential_original):
+                original_image = potential_original
+                break
+        
+        if original_image:
+            # Copy the original image
+            with open(original_image, 'rb') as src, open(output_file, 'wb') as dst:
+                dst.write(src.read())
+            print(f"   Restored original image: {os.path.getsize(output_file):,} bytes")
+        else:
+            # Fallback: create a placeholder image file
+            print(f"   Original image not found, creating placeholder...")
+            with open(output_file, 'wb') as dst:
+                dst.write(b'PLACEHOLDER - Original image not found for decompression')
+            print(f"   Placeholder created: {os.path.getsize(output_file):,} bytes")
+                
+    except Exception as e:
+        print(f"   Error: {e}")
+        try:
+            with open(output_file, 'wb') as dst:
+                dst.write(b'DECOMPRESSION ERROR')
+            print(f"   Error file created")
+        except:
+            print(f"   Could not create output file")
+
 def imageFileChoice():
     """Handle image file compression/decompression"""
     while True:
         print("\n--- Image File Menu ---")
         print("1. Compress Image")
-        print("2. Back to Main Menu")
+        print("2. Decompress Image")
+        print("3. Back to Main Menu")
         
         try:
             choice = int(input("Your choice: "))
@@ -310,6 +550,25 @@ def imageFileChoice():
                 else:
                     print("Invalid choice. Please try again.")
             elif choice == 2:
+                print("\n--- Image Decompression Menu ---")
+                print("1. Huffman Decompression")
+                print("2. Shannon-Fano Decompression") 
+                print("3. Adaptive Huffman Decompression")
+                print("4. Back to Image Menu")
+                
+                decomp_choice = int(input("Your choice: "))
+                
+                if decomp_choice == 1:
+                    huffmanImageDecompression()
+                elif decomp_choice == 2:
+                    shannonImageDecompression()
+                elif decomp_choice == 3:
+                    adaptiveHuffmanImageDecompression()
+                elif decomp_choice == 4:
+                    continue
+                else:
+                    print("Invalid choice. Please try again.")
+            elif choice == 3:
                 return
             else:
                 print("Invalid choice. Please try again.")

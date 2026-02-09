@@ -302,7 +302,8 @@ def _run_huffman_image(image_path):
         # Pass bytes directly to avoid string conversion issues
         compressor.compress_file(image_data, output_file)
         
-        comp_size = len(open(output_file, 'rb').read())
+        # Use correct original size (already calculated above)
+        comp_size = os.path.getsize(output_file)
         final_size = comp_size if comp_size < orig_size else orig_size
         return {"name": "Huffman", "orig_size": orig_size, "comp_size": final_size}
         
