@@ -15,11 +15,6 @@ Pillow==11.1.0
 
 # Audio processing
 pydub==0.25.1
-audioop-lts  # Required for Python 3.13+ compatibility
-
-# Web interface (optional)
-Flask==3.0.3
-Werkzeug==3.0.4
 
 # Development utilities
 python-dotenv==1.0.1
