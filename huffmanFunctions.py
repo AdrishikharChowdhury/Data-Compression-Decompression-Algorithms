@@ -895,15 +895,10 @@ def huffmanImageCompression():
         if not image_data:
             print("Error: Image file is empty!")
             return
-        
-        # Use existing working Huffman compressor
-        compressor = HuffmanCompressor()
-        
-        # Save compressed image
-        output_file = f"{outputHuffmanImage}/{os.path.splitext(os.path.basename(selected_image))[0]}.huf"
-        compressor.compress_file(image_data, output_file)
-        
-        comp_size = len(open(output_file, 'rb').read())
+         
+        # Use the same optimized approach as _run_huffman_image
+        result = _run_huffman_image(selected_image)
+        comp_size = result.get("comp_size", orig_size)
         
         # Check if compression is beneficial
         if comp_size >= orig_size:

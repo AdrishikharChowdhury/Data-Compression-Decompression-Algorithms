@@ -998,15 +998,10 @@ def shannonImageCompression():
         if not image_data:
             print("Error: Image file is empty!")
             return
-        
-        # Use existing working Shannon-Fano compressor
-        compressor = ShannonFanoCompressor()
-        
-        # Save compressed image
-        output_file = f"{outputShannonImage}/{os.path.splitext(os.path.basename(selected_image))[0]}.sf"
-        compressor.compress_file(image_data, output_file)
-        
-        comp_size = len(open(output_file, 'rb').read())
+         
+        # Use the same optimized approach as _run_shannon_fano_image
+        result = _run_shannon_fano_image(selected_image)
+        comp_size = result.get("comp_size", orig_size)
         
         # Check if compression is beneficial
         if comp_size >= orig_size:

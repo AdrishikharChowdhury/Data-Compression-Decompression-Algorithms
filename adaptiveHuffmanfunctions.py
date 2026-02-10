@@ -1000,47 +1000,10 @@ def adaptiveHuffmanImageCompression():
         # Convert to bytes if needed
         if isinstance(image_data, str):
             image_data = image_data.encode('latin1')
-        
-        # Compress ALL images regardless of size using adaptive approach
-        if orig_size < 200:
-            # For small images, use ultra-compact adaptive compression
-            working_data = image_data[:min(200, len(image_data))]  # Limit to prevent errors
-            print(f"   Using ultra-compact adaptive compression for small image")
-        else:
-            working_data = image_data
-            print(f"   Using adaptive compression for image")
-        
-        # Convert bytes to string-like format for compression (more efficient)
-        # Use extended Unicode characters for 128-255 to avoid string conversion overhead
-        text_data = ''.join(chr(int(b)) if int(b) < 256 else chr(128 + (int(b) % 128)) for b in image_data)
-        
-        # Process entire image for real compression
-        working_text = text_data
-        
-        # Use Adaptive Huffman compressor
-        compressor = AdaptiveHuffmanCompressor()
-        compressed_bits, total_bits = compressor.compress_stream(working_text)
-        
-        # Save compressed image
-        output_file = f"{outputAdaptiveHuffmanImage}/{os.path.splitext(os.path.basename(selected_image))[0]}.ahuf"
-        
-        with open(output_file, 'wb') as f:
-            f.write(b"AHF")  # Adaptive Huffman marker
-            f.write(orig_size.to_bytes(4, 'big'))  # Original size
-            # Use safe bit counting for total_bits
-            safe_total_bits = min(total_bits, 255) if isinstance(total_bits, int) else 255
-            f.write(safe_total_bits.to_bytes(1, 'big'))  # Total bits for reference
-            if isinstance(compressed_bits, bitarray):
-                padding = (8 - len(compressed_bits) % 8) % 8
-                f.write(padding.to_bytes(1, 'big'))  # Padding
-                compressed_bits.tofile(f)
-            else:
-                bit_data = bitarray(compressed_bits)
-                padding = (8 - len(bit_data) % 8) % 8
-                f.write(padding.to_bytes(1, 'big'))  # Padding
-                bit_data.tofile(f)
-        
-        comp_size = len(open(output_file, 'rb').read())
+         
+        # Use the same optimized approach as _run_adaptive_huffman_image
+        result = _run_adaptive_huffman_image(selected_image)
+        comp_size = result.get("comp_size", orig_size)
         
         # Check if compression is beneficial
         if comp_size >= orig_size:
