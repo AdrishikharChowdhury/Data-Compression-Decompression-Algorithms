@@ -249,24 +249,26 @@ class ShannonFanoDecompressor:
             return ""
 
 # --- File paths and public functions ---
+from constants import outputShannonText, outputShannonDecompressedText
+
 filePath = "./files"
 outputFiles = f"{filePath}/outputs"
-outputShannonFiles = f"{outputFiles}/shannon_files"
+outputShannonFiles = outputShannonText
 
 def shanonDecompression():
     """Decompress a Shannon-Fano compressed file with file selection."""
     import os
     import glob
-    from constants import outputShannonFiles
+    from constants import outputShannonText, outputShannonDecompressedText
     
-    # Find all Shannon-Fano compressed files
+    # Find all Shannon-Fano compressed files in outputShannonText
     shannon_files = []
     for ext in ['*.sf']:
-        shannon_files.extend(glob.glob(f"{outputShannonFiles}/*{ext}"))
-        shannon_files.extend(glob.glob(f"{outputShannonFiles}/*{ext.upper()}"))
+        shannon_files.extend(glob.glob(f"{outputShannonText}/*{ext}"))
+        shannon_files.extend(glob.glob(f"{outputShannonText}/*{ext.upper()}"))
     
     if not shannon_files:
-        print("No Shannon-Fano compressed files found.")
+        print("No Shannon-Fano compressed files found in outputShannonText folder.")
         return
     
     shannon_files = sorted(list(set(shannon_files)))
@@ -300,7 +302,7 @@ def shanonDecompression():
         elif base_name.startswith('compressed_compare_'):
             base_name = base_name[18:]  # Remove 'compressed_compare_' prefix
         
-        output_file = f"{outputShannonFiles}/{base_name}.txt"
+        output_file = f"{outputShannonDecompressedText}/{base_name}.txt"
         
         write_text_file(output_file, decompressed_text)
         

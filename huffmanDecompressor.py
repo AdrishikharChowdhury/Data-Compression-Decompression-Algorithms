@@ -4,6 +4,7 @@ import heapq
 from typing import Optional, Dict
 from file_handler import write_text_file
 import os
+from constants import outputHuffmanText, outputHuffmanDecompressedText
 
 class Node:
     def __init__(self, char: Optional[str] = None, freq: int = 0):
@@ -318,19 +319,18 @@ class HuffmanDecompressor:
 # --- File paths and public functions ---
 filePath = "./files"
 outputFiles = f"{filePath}/outputs"
-outputHuffmanFiles = f"{outputFiles}/huffmann_files"
+outputHuffmanText = outputHuffmanText  # Use constant from constants.py
 
 def huffmanDecompression():
     """Decompress a Huffman compressed file with file selection."""
     import os
     import glob
-    from constants import outputHuffmanFiles
     
     # Find all Huffman compressed files
     huffman_files = []
     for ext in ['*.huf']:
-        huffman_files.extend(glob.glob(f"{outputHuffmanFiles}/*{ext}"))
-        huffman_files.extend(glob.glob(f"{outputHuffmanFiles}/*{ext.upper()}"))
+        huffman_files.extend(glob.glob(f"{outputHuffmanText}/*{ext}"))
+        huffman_files.extend(glob.glob(f"{outputHuffmanText}/*{ext.upper()}"))
     
     if not huffman_files:
         print("No Huffman compressed files found.")
@@ -365,7 +365,7 @@ def huffmanDecompression():
         if base_name.startswith('compressed_'):
             base_name = base_name[11:]  # Remove 'compressed_' prefix
         
-        output_file = f"{outputHuffmanFiles}/{base_name}.txt"
+        output_file = f"{outputHuffmanDecompressedText}/{base_name}.txt"
         
         write_text_file(output_file, decompressed_text)
         

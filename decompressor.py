@@ -4,22 +4,50 @@ from shannonDecompressor import shanonDecompression as sf_decompress
 from adaptiveHuffmanDecompressor import adaptiveHuffmanDecompression as ah_decompress
 import os
 import glob
-from constants import outputHuffmanFiles, outputShannonFiles, outputAdaptiveHuffmannFiles
+from constants import (
+    outputHuffmanText, outputHuffmanImage, outputHuffmanAudio,
+    outputShannonText, outputShannonImage, outputShannonAudio,
+    outputAdaptiveHuffmanText, outputAdaptiveHuffmanImage, outputAdaptiveHuffmanAudio
+)
 
-def selectCompressedFile(algorithm):
+def selectCompressedFile(algorithm, file_type="text"):
     """Select a compressed file for decompression"""
-    print(f"\n Available {algorithm.upper()} compressed files:")
+    print(f"\n Available {algorithm.upper()} compressed files ({file_type}):")
     
     # Define directories and extensions for each algorithm
     if algorithm == "huffman":
-        compressed_dir = outputHuffmanFiles
         extensions = ['*.huf']
-    elif algorithm == "shannon" or algorithm == "shannon":
-        compressed_dir = outputShannonFiles
+        if file_type == "text":
+            compressed_dir = outputHuffmanText
+        elif file_type == "image":
+            compressed_dir = outputHuffmanImage
+        elif file_type == "audio":
+            compressed_dir = outputHuffmanAudio
+        else:
+            print(f"Invalid file type: {file_type}")
+            return None
+    elif algorithm == "shannon":
         extensions = ['*.sf']
+        if file_type == "text":
+            compressed_dir = outputShannonText
+        elif file_type == "image":
+            compressed_dir = outputShannonImage
+        elif file_type == "audio":
+            compressed_dir = outputShannonAudio
+        else:
+            print(f"Invalid file type: {file_type}")
+            return None
     elif algorithm == "adaptive":
-        compressed_dir = outputAdaptiveHuffmannFiles
         extensions = ['*.ahuf']
+        if file_type == "text":
+            compressed_dir = outputAdaptiveHuffmanText
+        elif file_type == "image":
+            compressed_dir = outputAdaptiveHuffmanImage
+        elif file_type == "audio":
+            compressed_dir = outputAdaptiveHuffmanAudio
+        else:
+            print(f"Invalid file type: {file_type}")
+            return None
     else:
         print("Invalid algorithm")
         return None

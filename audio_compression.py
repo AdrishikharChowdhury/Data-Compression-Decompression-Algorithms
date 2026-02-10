@@ -16,6 +16,13 @@ import logging
 from multiprocessing import Pool, cpu_count
 from bitarray import bitarray
 
+# Import constants for folder structure
+from constants import (
+    outputHuffmanAudio,
+    outputAdaptiveHuffmanAudio,
+    outputShannonAudio
+)
+
 # Try to import pydub, but make it optional
 try:
     from pydub import AudioSegment
@@ -56,20 +63,14 @@ class AudioCompressor:
     ALGORITHM_EXTENSIONS = {
         'huffman': '.huf',
         'adaptive_huffman': '.ahuf',
-        'shannon_fano': '.sf',
-        'delta': '.delta',
-        'rle': '.rle',
-        'delta_rle': '.deltarle'
+        'shannon_fano': '.sf'
     }
     
-    # Folder names for each algorithm
+    # Folder names for each algorithm (using new constants for standardized folder structure)
     ALGORITHM_FOLDERS = {
-        'huffman': 'huffman_audio',
-        'adaptive_huffman': 'adaptive_huffman_audio',
-        'shannon_fano': 'shannon_fano_audio',
-        'delta': 'delta_audio',
-        'rle': 'rle_audio',
-        'delta_rle': 'delta_rle_audio'
+        'huffman': outputHuffmanAudio,
+        'adaptive_huffman': outputAdaptiveHuffmanAudio,
+        'shannon_fano': outputShannonAudio
     }
     
     def __init__(self, base_output_dir='./files/outputs'):
@@ -83,17 +84,14 @@ class AudioCompressor:
     
     def _create_output_directories(self):
         """Create output directories for all algorithms"""
-        for folder_name in self.ALGORITHM_FOLDERS.values():
-            folder_path = os.path.join(self.base_output_dir, folder_name)
+        for folder_path in self.ALGORITHM_FOLDERS.values():
             os.makedirs(folder_path, exist_ok=True)
     
     def _get_output_path(self, input_path: str, algorithm: str) -> str:
         """Generate output path with correct extension and folder"""
         base_name = os.path.splitext(os.path.basename(input_path))[0]
         extension = self.ALGORITHM_EXTENSIONS.get(algorithm, '.compressed')
-        folder_name = self.ALGORITHM_FOLDERS.get(algorithm, 'compressed_audio')
-        
-        output_dir = os.path.join(self.base_output_dir, folder_name)
+        output_dir = self.ALGORITHM_FOLDERS.get(algorithm, './files/outputs/compressed_audio')
         os.makedirs(output_dir, exist_ok=True)
         
         return os.path.join(output_dir, f"{base_name}{extension}")
@@ -289,6 +287,36 @@ class AudioCompressor:
             if code_str in code_to_symbol:
                 decoded_samples.append(code_to_symbol[code_str])
                 current_code = bitarray()
+        
+        # Convert back to float with correct precision
+        max_val = 2 ** (precision - 1) - 1
+        decoded_array = np.array(decoded_samples, dtype=np.float32) / max_val
+        return decoded_array
+    
+    def shannon_fano_decode(self, encoded_data, metadata):
+        """Decode Shannon-Fano encoded audio data"""
+        codes = metadata['codes']
+        padding = metadata['padding']
+        precision = metadata.get('precision', 10)
+        
+        # Convert bytes back to bits using bitarray
+        encoded_bits = bitarray()
+        encoded_bits.frombytes(encoded_data)
+        if padding > 0:
+            encoded_bits = encoded_bits[:-padding]
+        
+        # Create reverse lookup
+        code_to_symbol = {v: k for k, v in codes.items()}
+        
+        # Decode using bitarray
+        decoded_samples = []
+        current_code = ""
+        
+        for bit in encoded_bits.to01():
+            current_code += bit
+            if current_code in code_to_symbol:
+                decoded_samples.append(code_to_symbol[current_code])
+                current_code = ""
         
         # Convert back to float with correct precision
         max_val = 2 ** (precision - 1) - 1
@@ -671,24 +699,63 @@ class AudioCompressor:
 
         
         # Apply compression algorithm
+        import json
+        
+        def convert_metadata_for_json(metadata):
+            """Convert metadata to JSON-serializable format"""
+            converted = {}
+            for key, value in metadata.items():
+                if key == 'codes':
+                    # Convert numpy int keys to regular int
+                    converted[key] = {int(k): v for k, v in value.items()}
+                elif key == 'freq_dict':
+                    converted[key] = {int(k): int(v) for k, v in value.items()}
+                elif key == 'initial_symbols':
+                    converted[key] = [int(x) for x in value]
+                elif isinstance(value, np.integer):
+                    converted[key] = int(value)
+                elif isinstance(value, np.ndarray):
+                    converted[key] = value.tolist()
+                else:
+                    converted[key] = value
+            return converted
+        
         if algorithm == "huffman":
             compressed_data_bytes, metadata = self.huffman_encode(audio_data)
+            # Save metadata and compressed data together
+            metadata['sample_rate'] = sample_rate
+            metadata_serializable = convert_metadata_for_json(metadata)
+            metadata_bytes = json.dumps(metadata_serializable).encode('utf-8')
             with open(output_path, 'wb') as f:
+                f.write(struct.pack('>I', len(metadata_bytes)))  # 4 bytes for metadata length
+                f.write(metadata_bytes)
                 f.write(compressed_data_bytes)
             compressed_data = self.huffman_decode(compressed_data_bytes, metadata)
             compressed_data = compressed_data[:len(audio_data)]
             
         elif algorithm == "adaptive_huffman":
             compressed_data_bytes, metadata = self.adaptive_huffman_encode(audio_data)
+            # Save metadata and compressed data together
+            metadata['sample_rate'] = sample_rate
+            metadata_serializable = convert_metadata_for_json(metadata)
+            metadata_bytes = json.dumps(metadata_serializable).encode('utf-8')
             with open(output_path, 'wb') as f:
+                f.write(struct.pack('>I', len(metadata_bytes)))  # 4 bytes for metadata length
+                f.write(metadata_bytes)
                 f.write(compressed_data_bytes)
             compressed_data = audio_data
                 
         elif algorithm == "shannon_fano":
             compressed_data_bytes, metadata = self.shannon_fano_encode(audio_data)
+            # Save metadata and compressed data together
+            metadata['sample_rate'] = sample_rate
+            metadata_serializable = convert_metadata_for_json(metadata)
+            metadata_bytes = json.dumps(metadata_serializable).encode('utf-8')
             with open(output_path, 'wb') as f:
+                f.write(struct.pack('>I', len(metadata_bytes)))  # 4 bytes for metadata length
+                f.write(metadata_bytes)
                 f.write(compressed_data_bytes)
-            compressed_data = self.huffman_decode(compressed_data_bytes, metadata)
+            compressed_data = self.shannon_fano_decode(compressed_data_bytes, metadata)
             compressed_data = compressed_data[:len(audio_data)]
             
         else:

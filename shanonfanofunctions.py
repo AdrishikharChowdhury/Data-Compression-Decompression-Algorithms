@@ -2,7 +2,7 @@ from collections import Counter
 from file_handler import read_text_file,_print_results
 import os
 import glob
-from constants import inputFiles,outputShannonFiles,outputAdaptiveHuffmannFiles
+from constants import inputFiles,outputShannonFiles,outputShannonText,outputShannonImage,outputShannonAudio,outputAdaptiveHuffmannFiles
 from adaptiveHuffmann import AdaptiveHuffmanCompressor
 from file_handler import read_binary_data
 from shanonCompressor import ShannonFanoCompressor
@@ -66,7 +66,7 @@ def _ultra_optimized_shannon_fano(text, input_file, orig_len):
         padding = (8 - len(encoded_bits) % 8) % 8
         encoded_bits += '0' * padding
         
-        output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
+        output_file = f"{outputShannonText}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
         with open(output_file, 'wb') as f:
             f.write(b'S')  # Shannon-Fano marker
             f.write(orig_len.to_bytes(2, 'big'))  # Original size
@@ -111,7 +111,7 @@ def _ultra_optimized_shannon_fano(text, input_file, orig_len):
     compressed_text = ''.join(compressed)
     
     if len(compressed_text) < orig_len:
-        output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
+        output_file = f"{outputShannonText}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
         with open(output_file, 'wb') as f:
             f.write(b'R')  # RLE marker
             f.write(orig_len.to_bytes(2, 'big'))
@@ -123,7 +123,7 @@ def _ultra_optimized_shannon_fano(text, input_file, orig_len):
         return {"name": "Shannon-Fano", "orig_size": orig_len, "comp_size": comp_size}
     
     # FORCE REAL COMPRESSION - pack chars efficiently
-    output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
+    output_file = f"{outputShannonText}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
     
     if orig_len == 2:
         # Different packing strategy - use numeric codes
@@ -218,7 +218,7 @@ def _improved_standard_shannon_fano(text, input_file, orig_len):
     encoded_bits = ''.join(char_codes[char] for char in text)
     
     # Minimal overhead packaging
-    output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
+    output_file = f"{outputShannonText}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
     with open(output_file, 'wb') as f:
         f.write(b'S')  # Minimal Shannon-Fano marker
         f.write(orig_len.to_bytes(2, 'big'))  # Original size
@@ -253,7 +253,7 @@ def _fixed_3bit_encoding(text, input_file, orig_len, prefix):
     encoded_bits = ''.join(codes[char] for char in text)
     
     # Save with minimal header
-    output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
+    output_file = f"{outputShannonText}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
     with open(output_file, 'wb') as f:
         f.write(b"3BIT")  # 3-bit marker
         f.write(orig_len.to_bytes(2, 'big'))  # Original size
@@ -287,7 +287,7 @@ def _fixed_4bit_encoding(text, input_file, orig_len, prefix):
     encoded_bits = ''.join(codes[char] for char in text)
     
     # Save with minimal header
-    output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
+    output_file = f"{outputShannonText}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
     with open(output_file, 'wb') as f:
         f.write(b"4BIT")  # 4-bit marker
         f.write(orig_len.to_bytes(2, 'big'))  # Original size
@@ -327,7 +327,7 @@ def _smart_prefix_encoding(text, left_group, right_group, input_file, orig_len, 
     encoded_bits = ''.join(all_codes[char] for char in text)
     
     # Save with minimal header
-    output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
+    output_file = f"{outputShannonText}/{os.path.splitext(os.path.basename(input_file))[0]}.sf"
     with open(output_file, 'wb') as f:
         f.write(b"PREFIX")  # Prefix marker
         f.write(orig_len.to_bytes(2, 'big'))  # Original size
@@ -397,7 +397,7 @@ def _run_shannon_fano_image(image_path):
 def _compress_small_image_shannon(image_data, image_path, orig_size):
     """Compress small images using standard Shannon-Fano"""
     compressor = ShannonFanoCompressor()
-    output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(image_path))[0]}.sf"
+    output_file = f"{outputShannonImage}/{os.path.splitext(os.path.basename(image_path))[0]}.sf"
     
     # Use existing compressor for small images
     compressor.compress_file(image_data, output_file)
@@ -431,7 +431,7 @@ def _compress_medium_image_shannon(image_data, image_path, orig_size):
         all_compressed_chunks.append(compressed_chunk)
     
     # Save compressed image
-    output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(image_path))[0]}.sf"
+    output_file = f"{outputShannonImage}/{os.path.splitext(os.path.basename(image_path))[0]}.sf"
     
     with open(output_file, 'wb') as f:
         f.write(b"SFM")  # Shannon-Fano Medium marker
@@ -456,7 +456,7 @@ def _compress_large_image_shannon(image_data, image_path, orig_size):
     final_data = _apply_shannon_entropy_coding(compressed_data)
     
     # Step 3: Save with minimal overhead
-    output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(image_path))[0]}.sf"
+    output_file = f"{outputShannonImage}/{os.path.splitext(os.path.basename(image_path))[0]}.sf"
     
     with open(output_file, 'wb') as f:
         f.write(b"SCE")  # Shannon-Fano Effective marker
@@ -1003,7 +1003,7 @@ def shannonImageCompression():
         compressor = ShannonFanoCompressor()
         
         # Save compressed image
-        output_file = f"{outputShannonFiles}/{os.path.splitext(os.path.basename(selected_image))[0]}.sf"
+        output_file = f"{outputShannonImage}/{os.path.splitext(os.path.basename(selected_image))[0]}.sf"
         compressor.compress_file(image_data, output_file)
         
         comp_size = len(open(output_file, 'rb').read())
