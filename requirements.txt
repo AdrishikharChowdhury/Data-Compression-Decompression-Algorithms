@@ -18,3 +18,8 @@ pydub==0.25.1
 
 # Development utilities
 python-dotenv==1.0.1
+
+# Streamlit dependencies
+streamlit>=1.28.0
+pandas>=2.0.0
+setuptools>=65.0
