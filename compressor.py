@@ -2,7 +2,7 @@ import os
 from constants import inputFiles,outputAdaptiveHuffmannFiles,outputHuffmanFiles,outputShannonFiles,outputHuffmanText,outputShannonText,outputAdaptiveHuffmanText
 import glob
 from shanonfanofunctions import _run_shannon_fano
-from huffmanFunctions import _run_huffman
+from textHuffman import _run_huffman
 from adaptiveHuffmanfunctions import _run_adaptive_huffman
 
 # Create ALL directories

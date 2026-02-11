@@ -2,7 +2,7 @@ from adaptiveHuffmanfunctions import _run_adaptive_huffman_image
 import os
 from constants import inputFiles
 from shanonfanofunctions import _run_shannon_fano_image
-from huffmanFunctions import _run_huffman_image
+from imageHuffman import _run_huffman_image
 import glob
 
 def compare_all_image_techniques_with_choice():

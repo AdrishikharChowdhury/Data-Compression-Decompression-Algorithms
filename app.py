@@ -21,7 +21,10 @@ from audio_compression import AudioCompressor
 from compressor import compare_all_techniques_with_choice
 from imageCompression import compare_all_image_techniques_with_choice
 from audio_compression import AudioCompressor
-from huffmanFunctions import _run_huffman, _run_huffman_image, huffmanImageCompression
+# Import Huffman modules
+from textHuffman import _run_huffman
+from imageHuffman import _run_huffman_image
+from imageHuffman import huffmanImageCompression
 from shanonfanofunctions import _run_shannon_fano, _run_shannon_fano_image, shannonImageCompression
 from adaptiveHuffmanfunctions import _run_adaptive_huffman, _run_adaptive_huffman_image, adaptiveHuffmanImageCompression
 from constants import inputFiles, outputFiles
@@ -257,7 +260,7 @@ def decompress_image_file(file_path, algorithm):
                     for original_file in input_image_files:
                         try:
                             # Try compressing this image to see if it matches our compressed file size
-                            from huffmanFunctions import _run_huffman_image
+                            from imageHuffman import _run_huffman_image
                             test_result = _run_huffman_image(original_file)
                             
                             if test_result and test_result.get('comp_size') == compressed_size:

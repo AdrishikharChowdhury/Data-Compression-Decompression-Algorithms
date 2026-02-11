@@ -4,7 +4,7 @@ from imageCompression import   compare_all_image_techniques_with_choice
 from decompressor import huffmanDecompression, shanonDecompression, adaptiveHuffmanDecompression
 import glob
 from shanonfanofunctions import _run_shannon_fano,shannonImageCompression
-from huffmanFunctions import huffmanImageCompression
+from imageHuffman import huffmanImageCompression
 from adaptiveHuffmanfunctions import adaptiveHuffmanImageCompression
 from audio_compression import AudioCompressor
 from audioDecompressor import huffman_audio_decompression, adaptive_huffman_audio_decompression, shannon_fano_audio_decompression
