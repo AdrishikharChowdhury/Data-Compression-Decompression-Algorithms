@@ -1,9 +1,9 @@
 import os
 from constants import inputFiles,outputAdaptiveHuffmannFiles,outputHuffmanFiles,outputShannonFiles,outputHuffmanText,outputShannonText,outputAdaptiveHuffmanText
 import glob
-from textShanon import _run_shannon_fano
-from textHuffman import _run_huffman
-from textAdaptiveH import _run_adaptive_huffman
+from shannonfano import _run_shannon_fano
+from huffman import _run_huffman
+from adaptivehuffman import _run_adaptive_huffman
 
 # Create ALL directories
 os.makedirs(inputFiles, exist_ok=True)

@@ -3,10 +3,9 @@ from compressor import compare_all_techniques_with_choice,_run_huffman,_run_adap
 from imageCompression import   compare_all_image_techniques_with_choice
 from decompressor import huffmanDecompression, shanonDecompression, adaptiveHuffmanDecompression
 import glob
-from imageShanon import shannonImageCompression
-from textShanon import _run_shannon_fano
-from imageHuffman import huffmanImageCompression
-from imageAdaptiveH import adaptiveHuffmanImageCompression
+from shannonfano import shannonImageCompression, _run_shannon_fano
+from huffman import huffmanImageCompression
+from adaptivehuffman import adaptiveHuffmanImageCompression
 from audio_compression import AudioCompressor
 from audioDecompressor import huffman_audio_decompression, adaptive_huffman_audio_decompression, shannon_fano_audio_decompression
 from imageDecompressor import huffmanImageDecompression, shannonImageDecompression, adaptiveHuffmanImageDecompression

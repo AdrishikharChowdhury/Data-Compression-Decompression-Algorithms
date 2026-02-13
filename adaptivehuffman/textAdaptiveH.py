@@ -1,9 +1,9 @@
 from collections import Counter
-from adaptiveHuffmann import AdaptiveHuffmanCompressor
+from huffman import AdaptiveHuffmanCompressor
 from file_handler import read_text_file, _print_results
 import os
 from constants import inputFiles, outputAdaptiveHuffmanText
-from textHuffman import _improved_standard_huffman
+from huffman import _improved_standard_huffman
 from bitarray import bitarray
 
 def _run_adaptive_huffman(input_file):

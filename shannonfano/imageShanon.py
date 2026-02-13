@@ -1,7 +1,7 @@
 import os
 from constants import inputFiles,outputShannonImage
 from file_handler import read_binary_data
-from shanonCompressor import ShannonFanoCompressor
+from .shanonCompressor import ShannonFanoCompressor
 import glob
 
 def _run_shannon_fano_image(image_path):

@@ -6,7 +6,7 @@ Optimized Huffman compression for text files
 from file_handler import read_text_file, _print_results, read_binary_data
 import os
 from constants import inputFiles, outputHuffmanText
-from huffmanCompressor import HuffmanCompressor
+from huffman.huffmanCompressor import HuffmanCompressor
 
 def _run_huffman(input_file):
     """Runs optimized Huffman compression with smart overhead reduction."""

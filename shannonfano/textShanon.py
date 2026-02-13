@@ -2,7 +2,7 @@ from collections import Counter
 from file_handler import read_text_file,_print_results
 import os
 from constants import inputFiles,outputShannonText
-from shanonCompressor import ShannonFanoCompressor
+from .shanonCompressor import ShannonFanoCompressor
 
 def _run_shannon_fano(input_file):
     text = read_text_file(input_file)

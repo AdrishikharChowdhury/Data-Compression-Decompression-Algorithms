@@ -24,13 +24,13 @@ def save_compressed_file(compressed_bits, input_filename, output_filename):
         bits.tofile(f)
 
 def save_compressed_huffman_file(compressed_bits, input_filename, output_filename):
-    from huffmanCompressor import HuffmanCompressor
+    from huffman import HuffmanCompressor
     text = read_text_file(input_filename)
     compressor = HuffmanCompressor()
     compressor.compress_file(text, output_filename)
 
 def save_compressed_shannon_file(compressed_bits, input_filename, output_filename):
-    from shanonCompressor import ShannonFanoCompressor
+    from shannonfano import ShannonFanoCompressor
     text = read_text_file(input_filename)
     compressor = ShannonFanoCompressor()
     compressor.compress_file(text, output_filename)

@@ -1,7 +1,7 @@
 import os
 from constants import inputFiles, outputAdaptiveHuffmanImage
 from file_handler import read_binary_data
-from adaptiveHuffmann import AdaptiveHuffmanCompressor
+from huffman import AdaptiveHuffmanCompressor
 from bitarray import bitarray
 import glob
 
