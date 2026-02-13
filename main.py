@@ -6,7 +6,7 @@ import glob
 from imageShanon import shannonImageCompression
 from textShanon import _run_shannon_fano
 from imageHuffman import huffmanImageCompression
-from adaptiveHuffmanfunctions import adaptiveHuffmanImageCompression
+from imageAdaptiveH import adaptiveHuffmanImageCompression
 from audio_compression import AudioCompressor
 from audioDecompressor import huffman_audio_decompression, adaptive_huffman_audio_decompression, shannon_fano_audio_decompression
 from imageDecompressor import huffmanImageDecompression, shannonImageDecompression, adaptiveHuffmanImageDecompression

@@ -3,7 +3,7 @@ from constants import inputFiles,outputAdaptiveHuffmannFiles,outputHuffmanFiles,
 import glob
 from textShanon import _run_shannon_fano
 from textHuffman import _run_huffman
-from adaptiveHuffmanfunctions import _run_adaptive_huffman
+from textAdaptiveH import _run_adaptive_huffman
 
 # Create ALL directories
 os.makedirs(inputFiles, exist_ok=True)

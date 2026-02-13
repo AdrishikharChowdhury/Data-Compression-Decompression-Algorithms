@@ -25,8 +25,10 @@ from audio_compression import AudioCompressor
 from textHuffman import _run_huffman
 from imageHuffman import _run_huffman_image
 from imageHuffman import huffmanImageCompression
-from shanonfanofunctions import _run_shannon_fano, _run_shannon_fano_image, shannonImageCompression
-from adaptiveHuffmanfunctions import _run_adaptive_huffman, _run_adaptive_huffman_image, adaptiveHuffmanImageCompression
+from textShanon import _run_shannon_fano
+from imageShanon import _run_shannon_fano_image, shannonImageCompression
+from textAdaptiveH import _run_adaptive_huffman
+from imageAdaptiveH import _run_adaptive_huffman_image, adaptiveHuffmanImageCompression
 from constants import inputFiles, outputFiles
 from decompressor import huffmanDecompression, shanonDecompression, adaptiveHuffmanDecompression
 
@@ -297,7 +299,7 @@ def decompress_image_file(file_path, algorithm):
                     for original_file in input_image_files:
                         try:
                             # Try compressing this image to see if it matches our compressed file size
-                            from shanonfanofunctions import _run_shannon_fano_image
+                            from imageShanon import _run_shannon_fano_image
                             test_result = _run_shannon_fano_image(original_file)
                             
                             if test_result and test_result.get('comp_size') == compressed_size:
@@ -334,7 +336,7 @@ def decompress_image_file(file_path, algorithm):
                     for original_file in input_image_files:
                         try:
                             # Try compressing this image to see if it matches our compressed file size
-                            from adaptiveHuffmanfunctions import _run_adaptive_huffman_image
+                            from imageAdaptiveH import _run_adaptive_huffman_image
                             test_result = _run_adaptive_huffman_image(original_file)
                             
                             if test_result and test_result.get('comp_size') == compressed_size:
@@ -610,7 +612,7 @@ def decompress_text_file(file_path, algorithm):
                     for original_file in input_text_files:
                         try:
                             # Try compressing this file to see if it matches our compressed file size
-                            from shanonfanofunctions import _run_shannon_fano
+                            from textShanon import _run_shannon_fano
                             test_result = _run_shannon_fano(original_file)
                             
                             if test_result and test_result.get('comp_size') == compressed_size:
@@ -648,7 +650,7 @@ def decompress_text_file(file_path, algorithm):
                     for original_file in input_text_files:
                         try:
                             # Try compressing this file to see if it matches our compressed file size
-                            from adaptiveHuffmanfunctions import _run_adaptive_huffman
+                            from textAdaptiveH import _run_adaptive_huffman
                             test_result = _run_adaptive_huffman(original_file)
                             
                             if test_result and test_result.get('comp_size') == compressed_size:

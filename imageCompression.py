@@ -1,4 +1,4 @@
-from adaptiveHuffmanfunctions import _run_adaptive_huffman_image
+from imageAdaptiveH import _run_adaptive_huffman_image
 import os
 from constants import inputFiles
 from imageShanon import _run_shannon_fano_image
