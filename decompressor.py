@@ -1,7 +1,7 @@
 # decompressor.py - Fixed simple decompression with file selection
 from huffman import huffmanDecompression as hf_decompress
 from shannonfano import shanonDecompression as sf_decompress
-from huffman import adaptiveHuffmanDecompression as ah_decompress
+from adaptivehuffman import adaptiveHuffmanDecompression as ah_decompress
 import os
 import glob
 from constants import (

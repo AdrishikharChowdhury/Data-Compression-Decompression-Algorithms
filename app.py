@@ -11,24 +11,25 @@ from constants import (
     outputHuffmanText, outputShannonText, outputAdaptiveHuffmanText,
     outputHuffmanImage, outputShannonImage, outputAdaptiveHuffmanImage,
     outputHuffmanAudio, outputShannonAudio, outputAdaptiveHuffmanAudio,
-    outputFiles
+    outputFiles, inputFiles
 )
-
-# Import audio compressor
-from audio_compression import AudioCompressor
 
 # Import compression modules
 from compressor import compare_all_techniques_with_choice
 from imageCompression import compare_all_image_techniques_with_choice
-from audio_compression import AudioCompressor
+from decompressor import huffmanDecompression, shanonDecompression, adaptiveHuffmanDecompression
+
 # Import Huffman modules
-from huffman import _run_huffman, _run_huffman_image, huffmanImageCompression
+from huffman import _run_huffman, _run_huffman_image, huffmanImageCompression, HuffmanDecompressor
+
 # Import Shannon-Fano modules
 from shannonfano import _run_shannon_fano, _run_shannon_fano_image, shannonImageCompression, ShannonFanoDecompressor
+
 # Import Adaptive Huffman modules
-from adaptivehuffman import _run_adaptive_huffman, _run_adaptive_huffman_image, adaptiveHuffmanImageCompression
-from constants import inputFiles, outputFiles
-from decompressor import huffmanDecompression, shanonDecompression, adaptiveHuffmanDecompression
+from adaptivehuffman import _run_adaptive_huffman, _run_adaptive_huffman_image, adaptiveHuffmanImageCompression, AdaptiveHuffmanDecompressor
+
+# Import audio compressor
+from audio_compression import AudioCompressor
 
 # Configure Streamlit page
 st.set_page_config(
@@ -400,7 +401,7 @@ def decompress_audio_file(file_path, algorithm):
     """Decompress audio file using selected algorithm"""
     try:
         if algorithm == "huffman":
-            from huffman import HuffmanDecompressor, AdaptiveHuffmanDecompressor
+            from huffman import HuffmanDecompressor
             decompressor = HuffmanDecompressor()
             decompressed_data = decompressor.decompress_from_file(file_path)
         elif algorithm == "shannon":
@@ -408,7 +409,7 @@ def decompress_audio_file(file_path, algorithm):
             decompressor = ShannonFanoDecompressor()
             decompressed_data = decompressor.decompress_from_file(file_path)
         elif algorithm == "adaptive":
-            from huffman import HuffmanDecompressor, AdaptiveHuffmanDecompressor
+            from adaptivehuffman import AdaptiveHuffmanDecompressor
             decompressor = AdaptiveHuffmanDecompressor()
             decompressed_data = decompressor.decompress_from_file(file_path)
             
@@ -582,7 +583,7 @@ def decompress_text_file(file_path, algorithm):
     """Decompress text file using selected algorithm"""
     try:
         if algorithm == "huffman":
-            from huffman import HuffmanDecompressor, AdaptiveHuffmanDecompressor
+            from huffman import HuffmanDecompressor
             decompressor = HuffmanDecompressor()
             decompressed_text = decompressor.decompress_from_file(file_path)
         elif algorithm == "shannon":
@@ -624,7 +625,7 @@ def decompress_text_file(file_path, algorithm):
                     if not decompressed_text and input_text_files:
                         decompressed_text = read_text_file(input_text_files[0])
         elif algorithm == "adaptive":
-            from huffman import HuffmanDecompressor, AdaptiveHuffmanDecompressor
+            from adaptivehuffman import AdaptiveHuffmanDecompressor
             decompressor = AdaptiveHuffmanDecompressor()
             decompressed_text = decompressor.decompress_from_file(file_path)
             

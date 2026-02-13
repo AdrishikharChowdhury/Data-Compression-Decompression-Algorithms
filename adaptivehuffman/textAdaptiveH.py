@@ -1,5 +1,5 @@
 from collections import Counter
-from huffman import AdaptiveHuffmanCompressor
+from .adaptiveHuffmann import AdaptiveHuffmanCompressor
 from file_handler import read_text_file, _print_results
 import os
 from constants import inputFiles, outputAdaptiveHuffmanText
