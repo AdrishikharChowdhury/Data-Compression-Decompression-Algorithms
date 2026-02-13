@@ -146,8 +146,13 @@ def _improved_standard_huffman(text, input_file, orig_len):
     for byte, code in heap[0][1:]:
         codes[byte] = code
     
-    # Encode text
-    encoded_bits = ''.join(codes[byte] for byte in text_bytes)
+    # Convert to canonical format: sort by length then by symbol value
+    # This allows decompressor to reconstruct codes from just the lengths
+    symbol_lengths = {byte: len(code) for byte, code in codes.items()}
+    canonical_codes = _build_canonical_codes(symbol_lengths)
+    
+    # Encode text using canonical codes
+    encoded_bits = ''.join(canonical_codes[byte] for byte in text_bytes)
     
     # Save with standard header
     output_file = f"{outputHuffmanText}/{os.path.splitext(os.path.basename(input_file))[0]}.huf"
@@ -156,8 +161,8 @@ def _improved_standard_huffman(text, input_file, orig_len):
         f.write(orig_len.to_bytes(4, 'big'))  # Original size
         f.write(len(codes).to_bytes(2, 'big'))  # Number of symbols
         
-        # Save code table
-        for byte, code in codes.items():
+        # Save code table (symbol + code length only, not full code)
+        for byte, code in sorted(canonical_codes.items(), key=lambda x: x[0]):
             f.write(byte.to_bytes(1, 'big'))
             f.write(len(code).to_bytes(1, 'big'))
         
@@ -173,6 +178,25 @@ def _improved_standard_huffman(text, input_file, orig_len):
     
     comp_size = len(open(output_file, 'rb').read())
     return {"name": "Huffman", "orig_size": orig_len, "comp_size": comp_size}
+
+def _build_canonical_codes(symbol_lengths):
+    """Build canonical Huffman codes from symbol lengths."""
+    # Sort by code length, then by symbol value
+    sorted_symbols = sorted(symbol_lengths.items(), key=lambda x: (x[1], x[0]))
+    
+    # Assign canonical codes
+    current_code = 0
+    prev_length = 0
+    codes = {}
+    
+    for symbol, length in sorted_symbols:
+        if length > 0:
+            current_code <<= (length - prev_length)
+            codes[symbol] = format(current_code, f'0{length}b')
+            current_code += 1
+            prev_length = length
+    
+    return codes
 
 def huffmanCompression():
     """Main function for text Huffman compression"""
