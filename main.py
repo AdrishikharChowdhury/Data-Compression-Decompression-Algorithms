@@ -3,7 +3,8 @@ from compressor import compare_all_techniques_with_choice,_run_huffman,_run_adap
 from imageCompression import   compare_all_image_techniques_with_choice
 from decompressor import huffmanDecompression, shanonDecompression, adaptiveHuffmanDecompression
 import glob
-from shanonfanofunctions import _run_shannon_fano,shannonImageCompression
+from imageShanon import shannonImageCompression
+from textShanon import _run_shannon_fano
 from imageHuffman import huffmanImageCompression
 from adaptiveHuffmanfunctions import adaptiveHuffmanImageCompression
 from audio_compression import AudioCompressor
