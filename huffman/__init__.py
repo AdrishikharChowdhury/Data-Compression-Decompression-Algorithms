@@ -1,4 +1,4 @@
-from .textHuffman import _run_huffman, _improved_standard_huffman, huffmanCompression
+from .textHuffman import _run_huffman, huffmanCompression
 from .imageHuffman import _run_huffman_image, huffmanImageCompression
 from .audioHuffman import _run_huffman_audio, huffmanAudioCompression
 from .huffmanCompressor import HuffmanCompressor

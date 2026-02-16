@@ -590,40 +590,10 @@ def decompress_text_file(file_path, algorithm):
             from shannonfano import ShannonFanoDecompressor
             decompressor = ShannonFanoDecompressor()
             decompressed_text = decompressor.decompress_from_file(file_path)
-            
-            # Handle Shannon-Fano workaround - if result is empty, try to find original
-            if not decompressed_text or len(decompressed_text) == 0:
-                # Try all available input files since Shannon-Fano compression uses temporary names
-                import glob
-                from file_handler import read_text_file
-                
-                # Get all text files from inputs folder
-                input_text_files = []
-                for ext in ['*.txt', '*.csv', '*.json', '*.xml', '*.html', '*.md', '*.log']:
-                    input_text_files.extend(glob.glob(f"{inputFiles}/*{ext}"))
-                
-                # Try each input file to see if it matches the compressed file size
-                if input_text_files:
-                    # Get the size of our compressed file
-                    compressed_size = os.path.getsize(file_path)
-                    
-                    # Try each input file
-                    for original_file in input_text_files:
-                        try:
-                            # Try compressing this file to see if it matches our compressed file size
-                            from shannonfano import _run_shannon_fano
-                            test_result = _run_shannon_fano(original_file)
-                            
-                            if test_result and test_result.get('comp_size') == compressed_size:
-                                # This is likely the original file
-                                decompressed_text = read_text_file(original_file)
-                                break
-                        except:
-                            continue
-                    
-                    # If still no match, just use the first text file as fallback
-                    if not decompressed_text and input_text_files:
-                        decompressed_text = read_text_file(input_text_files[0])
+        elif algorithm == "adaptive":
+            from adaptivehuffman import AdaptiveHuffmanDecompressor
+            decompressor = AdaptiveHuffmanDecompressor()
+            decompressed_text = decompressor.decompress_from_file(file_path)
         elif algorithm == "adaptive":
             from adaptivehuffman import AdaptiveHuffmanDecompressor
             decompressor = AdaptiveHuffmanDecompressor()

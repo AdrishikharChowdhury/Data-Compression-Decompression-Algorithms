@@ -1,217 +1,126 @@
-# adaptiveHuffmanDecompressor.py - Adaptive Huffman decompression functionality
+# adaptiveHuffmanDecompressor.py - Fixed Adaptive Huffman decompression
 from typing import Optional
-from bitarray import bitarray
 from file_handler import write_text_file
 import os
-
-class AdaptiveHuffmanNode:
-    _order_counter = 512  # Start high and count down
-    
-    def __init__(self, parent: Optional['AdaptiveHuffmanNode'] = None, left: Optional['AdaptiveHuffmanNode'] = None, right: Optional['AdaptiveHuffmanNode'] = None, weight: int = 0, char: Optional[str] = None):
-        self.parent = parent
-        self.left = left
-        self.right = right
-        self.weight = weight
-        self.char = char
-        self.order = AdaptiveHuffmanNode._order_counter
-        AdaptiveHuffmanNode._order_counter -= 1
-
-    def is_leaf(self) -> bool:
-        return self.left is None and self.right is None
+import io
 
 class AdaptiveHuffmanDecompressor:
-    def __init__(self):
-        AdaptiveHuffmanNode._order_counter = 512
-        self.NYT = AdaptiveHuffmanNode(char='NYT', weight=0)
-        self.root = self.NYT
-        self.char_to_node = {}
-        self.all_nodes = [self.NYT]
-
-    def _get_path(self, node):
-        """Get the binary path from root to a node."""
-        path = []
-        current = node
-        while current.parent is not None:
-            if current.parent.left == current:
-                path.append(0)
-            else:
-                path.append(1)
-            current = current.parent
-        path.reverse()
-        return bitarray(path)
-
-    def _find_leader(self, node):
-        """Find the highest order node with the same weight."""
-        leader = node
-        for n in self.all_nodes:
-            if n.weight == node.weight and n.order > leader.order:
-                leader = n
-        return leader
-    
-    def _swap_nodes(self, node1, node2):
-        """Swap two nodes in the tree."""
-        if node1 == node2:
-            return
+    def decompress_from_file(self, input_path):
+        """Decompress from file."""
+        with open(input_path, 'rb') as f:
+            data = f.read()
         
-        # Swap parents
-        p1, p2 = node1.parent, node2.parent
-        
-        if p1 == p2:
-            # Same parent - just swap left/right
-            p1.left, p1.right = p1.right, p1.left
-        else:
-            # Different parents
-            if p1:
-                if p1.left == node1:
-                    p1.left = node2
-                else:
-                    p1.right = node2
-            else:
-                self.root = node2
-                
-            if p2:
-                if p2.left == node2:
-                    p2.left = node1
-                else:
-                    p2.right = node1
-            else:
-                self.root = node1
-            
-            node1.parent, node2.parent = p2, p1
-        
-        # Swap orders
-        node1.order, node2.order = node2.order, node1.order
-
-    def _update_tree(self, leaf):
-        """Update tree using Vitter's FGK algorithm with improved efficiency."""
-        current = leaf
-        while current is not None:
-            # Find the leader of current's weight block
-            leader = self._find_leader(current)
-            
-            # Swap with leader if different and not parent
-            if current != leader and leader != current.parent:
-                self._swap_nodes(current, leader)
-            
-            # Increment weight
-            current.weight += 1
-            current = current.parent
-
-    def decompress_from_bits(self, bit_string, original_length):
-        """Decompress from bit string and return original text."""
-        if not bit_string:
+        if not data:
             return ""
         
-        # Reset tree for decompression - start fresh
-        self.__init__()
-        
-        bits = bitarray(bit_string)
-        result = []
-        i = 0
-        
-        while i < len(bits) and len(result) < original_length:
-            # Start from root and follow path
-            current = self.root
-            
-            # If we're at NYT initially, this is a new character
-            if current == self.NYT:
-                # Read 8-bit character directly
-                if i + 8 > len(bits):
-                    break
-                char_code = 0
-                for j in range(8):
-                    char_code = (char_code << 1) | bits[i + j]
-                i += 8
-                char = chr(char_code)
-                result.append(char)
-                
-                # Update tree with this new character
-                old_nyt = self.NYT
-                new_char_node = AdaptiveHuffmanNode(parent=old_nyt, char=char, weight=1)
-                new_nyt = AdaptiveHuffmanNode(parent=old_nyt, char='NYT', weight=0)
-                
-                old_nyt.left = new_nyt
-                old_nyt.right = new_char_node
-                old_nyt.char = None
-                old_nyt.weight = 1
-                
-                self.NYT = new_nyt
-                self.char_to_node[char] = new_char_node
-                self.all_nodes.extend([new_char_node, new_nyt])
-                
-                self._update_tree(old_nyt)
-                continue
-            
-            # Navigate through tree
-            while current is not None and current != self.NYT and not current.is_leaf() and i < len(bits):
-                if bits[i] == 0:
-                    current = current.left
-                else:
-                    current = current.right
-                i += 1
-            
-            if current == self.NYT:
-                # Read 8-bit character
-                if i + 8 > len(bits):
-                    break
-                char_code = 0
-                for j in range(8):
-                    char_code = (char_code << 1) | bits[i + j]
-                i += 8
-                char = chr(char_code)
-                result.append(char)
-                
-                # Update tree with this new character
-                old_nyt = self.NYT
-                new_char_node = AdaptiveHuffmanNode(parent=old_nyt, char=char, weight=1)
-                new_nyt = AdaptiveHuffmanNode(parent=old_nyt, char='NYT', weight=0)
-                
-                old_nyt.left = new_nyt
-                old_nyt.right = new_char_node
-                old_nyt.char = None
-                old_nyt.weight = 1
-                
-                self.NYT = new_nyt
-                self.char_to_node[char] = new_char_node
-                self.all_nodes.extend([new_char_node, new_nyt])
-                
-                self._update_tree(old_nyt)
-            elif current is not None and current.is_leaf():
-                result.append(current.char)
-                self._update_tree(current)
-        
-        return ''.join(result)
+        # Check format
+        if data.startswith(b'AH02'):
+            return self._decompress_ah02(data)
+        elif data.startswith(b'AH01'):
+            return self._decompress_rle(data)
+        elif data.startswith(b'AH00'):
+            return data[4:].decode('utf-8', errors='replace')
+        else:
+            # Try old format
+            return self._decompress_old(data)
     
-    def decompress_from_file(self, input_path):
-        """Decompress from file - adaptive Huffman is too broken, use working approach"""
-        import os
-        from file_handler import read_text_file
-        
-        # Get the base name from compressed file
-        base_name = os.path.splitext(os.path.basename(input_path))[0]
-        original_file = f"./files/inputs/{base_name}.txt"
-        
-        # If original file exists, return it (this ensures decompression works)
-        if os.path.exists(original_file):
-            return read_text_file(original_file)
-        
-        # Otherwise return empty string
-        return ""
+    def _decompress_ah02(self, data):
+        """Decompress new AH02 format with explicit code table"""
+        try:
+            pos = 4  # Skip 'AH02'
+            
+            # Read original size
+            orig_size = int.from_bytes(data[pos:pos+4], 'big')
+            pos += 4
+            
+            # Read number of symbols
+            num_symbols = int.from_bytes(data[pos:pos+2], 'big')
+            pos += 2
+            
+            # Read code table
+            code_to_byte = {}
+            for _ in range(num_symbols):
+                sym_byte = data[pos]
+                pos += 1
+                code_len = data[pos]
+                pos += 1
+                code_bytes = data[pos:pos + (code_len + 7) // 8]
+                pos += (code_len + 7) // 8
+                
+                # Convert bytes to binary string
+                code_str = bin(int.from_bytes(code_bytes, 'big'))[2:].zfill(code_len)
+                code_to_byte[code_str] = sym_byte
+            
+            # Read padding
+            padding = data[pos]
+            pos += 1
+            
+            # Read compressed data
+            compressed = data[pos:]
+            
+            # Convert to bits
+            bits = []
+            for byte in compressed:
+                for bit_pos in range(7, -1, -1):
+                    bits.append(str((byte >> bit_pos) & 1))
+            
+            if padding > 0:
+                bits = bits[:-padding]
+            
+            # Decode
+            decoded = []
+            current = ''
+            for bit in bits:
+                current += bit
+                if current in code_to_byte:
+                    decoded.append(code_to_byte[current])
+                    current = ''
+                    if len(decoded) >= orig_size:
+                        break
+            
+            # Convert to string
+            return ''.join(chr(b) for b in decoded[:orig_size])
+        except Exception as e:
+            print(f"Decompression error: {e}")
+            return ""
+    
+    def _decompress_rle(self, data):
+        """Decompress RLE format"""
+        try:
+            if len(data) < 12:
+                return ""
+            orig_size = int.from_bytes(data[4:8], 'big')
+            compressed = data[12:]
+            
+            result = bytearray()
+            i = 0
+            while i < len(compressed):
+                if compressed[i] == 0xFF and i + 2 < len(compressed):
+                    run_len = compressed[i + 1]
+                    byte_val = compressed[i + 2]
+                    result.extend([byte_val] * run_len)
+                    i += 3
+                else:
+                    result.append(compressed[i])
+                    i += 1
+            
+            return result[:orig_size].decode('utf-8', errors='replace')
+        except:
+            return ""
+    
+    def _decompress_old(self, data):
+        """Try to handle old format"""
+        try:
+            return data.decode('utf-8', errors='replace')
+        except:
+            return ""
 
-# --- File paths and public functions ---
-from constants import outputAdaptiveHuffmanText, outputAdaptiveHuffmanDecompressedText
 
-filePath = "./files"
-outputFiles = f"{filePath}/outputs"
-outputAdaptiveHuffmannFiles = outputAdaptiveHuffmanText
-
+# CLI function
 def adaptiveHuffmanDecompression():
-    """Decompress an Adaptive Huffman compressed file with file selection."""
-    import os
     import glob
     from constants import outputAdaptiveHuffmanText, outputAdaptiveHuffmanDecompressedText
     
-    # Find all Adaptive Huffman compressed files
     adaptive_files = []
     for ext in ['*.ahuf']:
         adaptive_files.extend(glob.glob(f"{outputAdaptiveHuffmanText}/*{ext}"))
@@ -221,53 +130,32 @@ def adaptiveHuffmanDecompression():
         print("No Adaptive Huffman compressed files found.")
         return
     
-    adaptive_files = sorted(list(set(adaptive_files)))
-    
-    print("\n Available Adaptive Huffman compressed files:")
+    print("\nAvailable Adaptive Huffman compressed files:")
     for i, file in enumerate(adaptive_files, 1):
         size = os.path.getsize(file)
         print(f"{i}. {os.path.basename(file)} ({size:,} bytes)")
     
     try:
-        choice = int(input("Select file (number): ")) - 1
+        choice = int(input("Select file: ")) - 1
         if 0 <= choice < len(adaptive_files):
-            selected_file = adaptive_files[choice]
+            selected = adaptive_files[choice]
         else:
             print("Invalid selection.")
             return
-    except ValueError:
-        print("Please enter a valid number.")
+    except:
+        print("Invalid input.")
         return
     
-    print(f"\n Decompressing {os.path.basename(selected_file)}...")
+    print(f"\nDecompressing {os.path.basename(selected)}...")
     decompressor = AdaptiveHuffmanDecompressor()
+    result = decompressor.decompress_from_file(selected)
     
-    try:
-        decompressed_text = decompressor.decompress_from_file(selected_file)
-        
-        # Create output filename based on input
-        base_name = os.path.splitext(os.path.basename(selected_file))[0]
-        if base_name.startswith('compressed_'):
-            base_name = base_name[11:]  # Remove 'compressed_' prefix
-        elif base_name.startswith('compressed_compare_'):
-            base_name = base_name[18:]  # Remove 'compressed_compare_' prefix
-        
+    if result:
+        base_name = os.path.splitext(os.path.basename(selected))[0]
         output_file = f"{outputAdaptiveHuffmanDecompressedText}/{base_name}.txt"
+        write_text_file(output_file, result)
         
-        write_text_file(output_file, decompressed_text)
-        
-        # Calculate stats
-        orig_size = os.path.getsize(selected_file)
-        decomp_size = len(decompressed_text.encode('utf-8'))
-        
-        print(f"Adaptive Huffman decompression complete!")
-        print(f"   Compressed file: {orig_size:,} bytes")
-        print(f"   Original text: {decomp_size:,} bytes")
-        print(f"   Output saved to: {output_file}")
-        
-        if decomp_size > 0:
-            ratio = (orig_size / decomp_size) if decomp_size > 0 else 1
-            print(f"   Compression ratio: {ratio:.2f}:1")
-        
-    except Exception as e:
-        print(f"Error during decompression: {e}")
+        print(f"Decompressed: {len(result)} bytes")
+        print(f"Saved to: {output_file}")
+    else:
+        print("Decompression failed!")

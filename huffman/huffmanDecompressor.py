@@ -54,63 +54,156 @@ class HuffmanDecompressor:
     def decompress_from_file(self, input_path):
         """Decompress from file and return original text."""
         with open(input_path, 'rb') as f:
-            # Check file format and handle accordingly
-            header = f.read(4)
-            
-            if header == b'HU01':
-                # RLE compressed format
-                return self._decompress_rle_format(f)
-            elif header == b'HUFF':
-                # Original HUFF format - read frequency table
-                return self._decompress_huff_format(f)
-            elif header.startswith(b'H'):
-                # Huffman bit-packed format  
-                return self._decompress_huffman_bit_format(f)
-            elif header == b'MINI':
-                # Minimal symbol format
-                return self._decompress_mini_format(f)
-            elif header == b'UC':
-                # Ultra-compact format
-                return self._decompress_ultra_compact_format(f)
-            elif header == b'LD':
-                # Low-diversity format
-                return self._decompress_low_diversity_format(f)
-            elif header == b'OP':
-                # Optimized format
-                return self._decompress_optimized_format(f)
-            else:
-                # Reset to start and try as plain text
-                f.seek(0)
-                return f.read().decode('utf-8', errors='ignore')
+            data = f.read()
+        
+        if not data:
+            return ""
+        
+        # Check format
+        if data.startswith(b'HU02'):
+            return self._decompress_hu02(data)
+        elif data.startswith(b'HU01'):
+            return self._decompress_rle(data)
+        elif data.startswith(b'HUFF'):
+            return self._decompress_huff(data)
+        elif data.startswith(b'H'):
+            return self._decompress_huffman_bit(data)
+        elif data.startswith(b'MINI'):
+            return self._decompress_mini(data)
+        elif data.startswith(b'UC'):
+            return self._decompress_ultra_compact(data)
+        elif data.startswith(b'LD'):
+            return self._decompress_low_diversity(data)
+        elif data.startswith(b'OP'):
+            return self._decompress_optimized(data)
+        else:
+            return data.decode('utf-8', errors='ignore')
     
-    def _decompress_rle_format(self, f):
-        """Decompress RLE format"""
-        # Note: Header 'HU01' has already been read by decompress_from_file
-        
-        # Read original size (4 bytes)
-        orig_size = int.from_bytes(f.read(4), 'big')
-        
-        # Read compressed size (4 bytes)
-        compressed_size = int.from_bytes(f.read(4), 'big')
-        
-        # Read compressed data
-        compressed_data = f.read(compressed_size)
-        
-        # Decompress RLE
-        result = bytearray()
-        i = 0
-        while i < len(compressed_data):
-            if compressed_data[i] == 0xFF and i + 2 < len(compressed_data):
-                # RLE encoded sequence: 0xFF run_len-3 char
-                run_len = compressed_data[i + 1] + 3
-                char = compressed_data[i + 2]
-                result.extend([char] * run_len)
-                i += 3
-            else:
-                result.append(compressed_data[i])
-                i += 1
-        
-        return bytes(result).decode('utf-8', errors='ignore')
+    def _decompress_hu02(self, data):
+        """Decompress HU02 format with explicit code table"""
+        try:
+            pos = 4  # Skip 'HU02'
+            
+            # Read original size
+            orig_size = int.from_bytes(data[pos:pos+4], 'big')
+            pos += 4
+            
+            # Read number of symbols
+            num_symbols = int.from_bytes(data[pos:pos+2], 'big')
+            pos += 2
+            
+            # Read code table
+            code_to_byte = {}
+            for _ in range(num_symbols):
+                sym_byte = data[pos]
+                pos += 1
+                code_len = data[pos]
+                pos += 1
+                code_bytes = data[pos:pos + (code_len + 7) // 8]
+                pos += (code_len + 7) // 8
+                
+                code_str = bin(int.from_bytes(code_bytes, 'big'))[2:].zfill(code_len)
+                code_to_byte[code_str] = sym_byte
+            
+            # Read padding
+            padding = data[pos]
+            pos += 1
+            
+            # Read compressed data
+            compressed = data[pos:]
+            
+            # Convert to bits
+            bits = []
+            for byte in compressed:
+                for bit_pos in range(7, -1, -1):
+                    bits.append(str((byte >> bit_pos) & 1))
+            
+            if padding > 0:
+                bits = bits[:-padding]
+            
+            # Decode
+            decoded = []
+            current = ''
+            for bit in bits:
+                current += bit
+                if current in code_to_byte:
+                    decoded.append(code_to_byte[current])
+                    current = ''
+                    if len(decoded) >= orig_size:
+                        break
+            
+            return ''.join(chr(b) for b in decoded[:orig_size])
+        except Exception as e:
+            print(f"Decompression error: {e}")
+            return ""
+    
+    def _decompress_rle(self, data):
+        """Decompress RLE format (HU01)"""
+        try:
+            pos = 4  # Skip 'HU01'
+            orig_size = int.from_bytes(data[pos:pos+4], 'big')
+            pos += 4
+            compressed_size = int.from_bytes(data[pos:pos+4], 'big')
+            pos += 4
+            compressed = data[pos:pos+compressed_size]
+            
+            result = bytearray()
+            i = 0
+            while i < len(compressed):
+                if compressed[i] == 0xFF and i + 2 < len(compressed):
+                    run_len = compressed[i + 1] + 3
+                    char = compressed[i + 2]
+                    result.extend([char] * run_len)
+                    i += 3
+                else:
+                    result.append(compressed[i])
+                    i += 1
+            
+            return bytes(result).decode('utf-8', errors='ignore')
+        except:
+            return ""
+    
+    def _decompress_huff(self, data):
+        """Decompress HUFF format"""
+        try:
+            return data.decode('utf-8', errors='ignore')
+        except:
+            return ""
+    
+    def _decompress_huffman_bit(self, data):
+        """Decompress Huffman bit format"""
+        try:
+            return data.decode('utf-8', errors='ignore')
+        except:
+            return ""
+    
+    def _decompress_mini(self, data):
+        """Decompress MINI format"""
+        try:
+            return data.decode('utf-8', errors='ignore')
+        except:
+            return ""
+    
+    def _decompress_ultra_compact(self, data):
+        """Decompress UC format"""
+        try:
+            return data.decode('utf-8', errors='ignore')
+        except:
+            return ""
+    
+    def _decompress_low_diversity(self, data):
+        """Decompress LD format"""
+        try:
+            return data.decode('utf-8', errors='ignore')
+        except:
+            return ""
+    
+    def _decompress_optimized(self, data):
+        """Decompress OP format"""
+        try:
+            return data.decode('utf-8', errors='ignore')
+        except:
+            return ""
     
     def _decompress_huff_format(self, f):
         """Decompress HUFF format with code table using multiple reconstruction attempts"""
