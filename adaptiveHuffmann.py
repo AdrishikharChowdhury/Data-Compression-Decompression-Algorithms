@@ -94,13 +94,13 @@ class AdaptiveHuffmanCompressor:
         
         # Build Huffman tree
         heap = [[weight, [byte, ""]] for byte, weight in freq.items()]
-        heapq = __import__('heapq')
         heapq.heapify(heap)
         
         while len(heap) > 1:
             lo = heapq.heappop(heap)
             hi = heapq.heappop(heap)
-            heapq.heappush(heap, [lo[0] + hi[1]] + [lo[1] + hi[1]])
+            merged = [lo[0] + hi[0], lo[1] + hi[1]]
+            heapq.heappush(heap, merged)
         
         codes = {}
         if heap:
@@ -160,7 +160,8 @@ class AdaptiveHuffmanCompressor:
         while len(heap) > 1:
             lo = heapq.heappop(heap)
             hi = heapq.heappop(heap)
-            heapq.heappush(heap, [lo[0] + hi[1]] + [lo[1] + hi[1]])
+            merged = [lo[0] + hi[0], lo[1] + hi[1]]
+            heapq.heappush(heap, merged)
         
         codes = {}
         if heap:
