@@ -135,24 +135,24 @@ class ShannonFanoCompressor:
                 f.write(b'SFIMG')
             return
         
-        # Build frequency table
+        # Build frequency table - sort by frequency DESC, then by byte value ASC for deterministic codes
         freq = Counter(image_data)
         
-        # Build Shannon-Fano codes
-        items = sorted(freq.items(), key=lambda x: x[1], reverse=True)
+        # Build Shannon-Fano codes - use deterministic ordering
+        items = sorted(freq.items(), key=lambda x: (-x[1], x[0]))  # freq desc, byte asc
         codes = {}
         self._shannon_fano_encode(items, 0, len(items), codes, "")
         
         # Encode data
         encoded_bits = bitarray(''.join(codes.get(b, '') for b in image_data))
         
-        # Write file with frequency table
+        # Write file with frequency table - store sorted by byte for deterministic decode
         with open(output_path, 'wb') as f:
             f.write(b'SFIMG')  # Shannon-Fano Image marker
             f.write(len(image_data).to_bytes(4, 'big'))  # Original size
             f.write(len(freq).to_bytes(2, 'big'))  # Number of unique bytes
             
-            for byte, count in sorted(freq.items()):
+            for byte, count in sorted(freq.items()):  # Sort by byte for deterministic decode
                 f.write(byte.to_bytes(1, 'big'))
                 f.write(count.to_bytes(4, 'big'))
             
@@ -167,15 +167,25 @@ class ShannonFanoCompressor:
             codes[items[start][0]] = prefix or '0'
             return
         
+        if end - start <= 1:
+            for i in range(start, end):
+                codes[items[i][0]] = prefix + ('0' if i == start else '1')
+            return
+        
         total = sum(items[i][1] for i in range(start, end))
         half = total / 2
         cumsum = 0
-        split = start
+        split = start + 1
         for i in range(start, end):
             cumsum += items[i][1]
             if cumsum >= half:
                 break
             split = i + 1
+        
+        if split <= start:
+            split = start + 1
+        if split >= end:
+            split = end - 1
         
         self._shannon_fano_encode(items, start, split, codes, prefix + '0')
         self._shannon_fano_encode(items, split, end, codes, prefix + '1')
@@ -203,8 +213,8 @@ class ShannonFanoCompressor:
             if padding > 0:
                 encoded_bits = encoded_bits[:-padding]
         
-        # Rebuild codes
-        items = sorted(freq.items(), key=lambda x: x[1], reverse=True)
+        # Rebuild codes - use same sorting as compress for deterministic decode
+        items = sorted(freq.items(), key=lambda x: (-x[1], x[0]))  # freq desc, byte asc
         codes = {}
         self._shannon_fano_encode(items, 0, len(items), codes, "")
         reverse_codes = {v: k for k, v in codes.items()}

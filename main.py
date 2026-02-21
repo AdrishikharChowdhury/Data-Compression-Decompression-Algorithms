@@ -470,35 +470,20 @@ def adaptiveHuffmanImageDecompression():
     base_name = os.path.splitext(os.path.basename(selected_image))[0]
     output_file = f"{outputAdaptiveHuffmanDecompressedImage}/{base_name}.jpg"  # Default to jpg in decompressed folder
     
-    print(f"Adaptive Huffman image decompression complete!")
-    print(f"   Compressed file: {os.path.getsize(selected_image):,} bytes")
-    print(f"   Output saved to: {output_file}")
-    
     try:
-        # Find and restore the original image
-        base_name = os.path.splitext(os.path.basename(selected_image))[0]
+        from adaptiveHuffmann import AdaptiveHuffmanCompressor
+        compressor = AdaptiveHuffmanCompressor()
+        decompressed_data = compressor.decompress_image(selected_image)
         
-        # Try different original image extensions
-        original_extensions = ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.webp']
-        original_image = None
-        
-        for ext in original_extensions:
-            potential_original = f"{inputFiles}/{base_name}{ext}"
-            if os.path.exists(potential_original):
-                original_image = potential_original
-                break
-        
-        if original_image:
-            # Copy the original image
-            with open(original_image, 'rb') as src, open(output_file, 'wb') as dst:
-                dst.write(src.read())
-            print(f"   Restored original image: {os.path.getsize(output_file):,} bytes")
+        if decompressed_data:
+            with open(output_file, 'wb') as f:
+                f.write(decompressed_data)
+            print(f"Adaptive Huffman image decompression complete!")
+            print(f"   Compressed file: {os.path.getsize(selected_image):,} bytes")
+            print(f"   Decompressed file: {os.path.getsize(output_file):,} bytes")
+            print(f"   Output saved to: {output_file}")
         else:
-            # Fallback: create a placeholder image file
-            print(f"   Original image not found, creating placeholder...")
-            with open(output_file, 'wb') as dst:
-                dst.write(b'PLACEHOLDER - Original image not found for decompression')
-            print(f"   Placeholder created: {os.path.getsize(output_file):,} bytes")
+            raise Exception("Decompression returned no data")
                 
     except Exception as e:
         print(f"   Error: {e}")

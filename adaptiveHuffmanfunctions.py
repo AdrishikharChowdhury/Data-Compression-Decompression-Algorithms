@@ -1017,28 +1017,10 @@ def adaptiveHuffmanImageCompression():
         # Process entire image for real compression
         working_text = text_data
         
-        # Use Adaptive Huffman compressor
+        # Use Adaptive Huffman compressor with frequency table storage
         compressor = AdaptiveHuffmanCompressor()
-        compressed_bits, total_bits = compressor.compress_stream(working_text)
-        
-        # Save compressed image
         output_file = f"{outputAdaptiveHuffmanImage}/{os.path.splitext(os.path.basename(selected_image))[0]}.ahuf"
-        
-        with open(output_file, 'wb') as f:
-            f.write(b"AHF")  # Adaptive Huffman marker
-            f.write(orig_size.to_bytes(4, 'big'))  # Original size
-            # Use safe bit counting for total_bits
-            safe_total_bits = min(total_bits, 255) if isinstance(total_bits, int) else 255
-            f.write(safe_total_bits.to_bytes(1, 'big'))  # Total bits for reference
-            if isinstance(compressed_bits, bitarray):
-                padding = (8 - len(compressed_bits) % 8) % 8
-                f.write(padding.to_bytes(1, 'big'))  # Padding
-                compressed_bits.tofile(f)
-            else:
-                bit_data = bitarray(compressed_bits)
-                padding = (8 - len(bit_data) % 8) % 8
-                f.write(padding.to_bytes(1, 'big'))  # Padding
-                bit_data.tofile(f)
+        compressor.compress_image(image_data, output_file)
         
         comp_size = len(open(output_file, 'rb').read())
         
