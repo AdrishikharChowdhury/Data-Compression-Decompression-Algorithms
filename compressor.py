@@ -1,15 +1,18 @@
 import os
-from constants import inputFiles,outputAdaptiveHuffmannFiles,outputHuffmanFiles,outputShannonFiles
+from constants import inputFiles,outputAdaptiveHuffmannFiles,outputHuffmanFiles,outputShannonFiles,outputHuffmanText,outputShannonText,outputAdaptiveHuffmanText
 import glob
-from shannonfano import _run_shannon_fano
-from huffman import _run_huffman
-from adaptivehuffman import _run_adaptive_huffman
+from shanonfanofunctions import _run_shannon_fano
+from huffmanFunctions import _run_huffman
+from adaptiveHuffmanfunctions import _run_adaptive_huffman
 
 # Create ALL directories
 os.makedirs(inputFiles, exist_ok=True)
 os.makedirs(outputHuffmanFiles, exist_ok=True)
 os.makedirs(outputShannonFiles, exist_ok=True)
 os.makedirs(outputAdaptiveHuffmannFiles, exist_ok=True)
+os.makedirs(outputHuffmanText, exist_ok=True)
+os.makedirs(outputShannonText, exist_ok=True)
+os.makedirs(outputAdaptiveHuffmanText, exist_ok=True)
 
 def compare_all_techniques_with_choice():
     """Compare all compression techniques on user-selected file."""

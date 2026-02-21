@@ -1,0 +1,1 @@
+This is a medium sized test file with some repetitive text and some unique text to test compression algorithms performance on medium files. We want to see if all three compression methods work properly without increasing file size.

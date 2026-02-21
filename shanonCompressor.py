@@ -1,5 +1,6 @@
 # shannon_fano.py - Optimized Shannon-Fano algorithm
 from collections import Counter
+from bitarray import bitarray
 
 class ShannonFanoCompressor:
     def build_codes(self, text):
@@ -123,3 +124,100 @@ class ShannonFanoCompressor:
             f.write(orig_len.to_bytes(4, 'big'))  # Original size
             f.write(len(compressed).to_bytes(4, 'big'))  # Compressed size
             f.write(compressed)
+    
+    def compress_image(self, image_data, output_path):
+        """Compress image using proper Shannon-Fano with frequency table"""
+        if isinstance(image_data, str):
+            image_data = image_data.encode('latin1')
+        
+        if not image_data:
+            with open(output_path, 'wb') as f:
+                f.write(b'SFIMG')
+            return
+        
+        # Build frequency table
+        freq = Counter(image_data)
+        
+        # Build Shannon-Fano codes
+        items = sorted(freq.items(), key=lambda x: x[1], reverse=True)
+        codes = {}
+        self._shannon_fano_encode(items, 0, len(items), codes, "")
+        
+        # Encode data
+        encoded_bits = bitarray(''.join(codes.get(b, '') for b in image_data))
+        
+        # Write file with frequency table
+        with open(output_path, 'wb') as f:
+            f.write(b'SFIMG')  # Shannon-Fano Image marker
+            f.write(len(image_data).to_bytes(4, 'big'))  # Original size
+            f.write(len(freq).to_bytes(2, 'big'))  # Number of unique bytes
+            
+            for byte, count in sorted(freq.items()):
+                f.write(byte.to_bytes(1, 'big'))
+                f.write(count.to_bytes(4, 'big'))
+            
+            padding = (8 - len(encoded_bits) % 8) % 8
+            f.write(padding.to_bytes(1, 'big'))
+            encoded_bits.tofile(f)
+    
+    def _shannon_fano_encode(self, items, start, end, codes, prefix):
+        if start >= end:
+            return
+        if end - start == 1:
+            codes[items[start][0]] = prefix or '0'
+            return
+        
+        total = sum(items[i][1] for i in range(start, end))
+        half = total / 2
+        cumsum = 0
+        split = start
+        for i in range(start, end):
+            cumsum += items[i][1]
+            if cumsum >= half:
+                break
+            split = i + 1
+        
+        self._shannon_fano_encode(items, start, split, codes, prefix + '0')
+        self._shannon_fano_encode(items, split, end, codes, prefix + '1')
+    
+    def decompress_image(self, input_path):
+        """Decompress Shannon-Fano compressed image"""
+        with open(input_path, 'rb') as f:
+            marker = f.read(5)
+            if marker != b'SFIMG':
+                raise ValueError(f"Invalid Shannon-Fano image file: {marker}")
+            
+            orig_size = int.from_bytes(f.read(4), 'big')
+            num_bytes = int.from_bytes(f.read(2), 'big')
+            
+            freq = {}
+            for _ in range(num_bytes):
+                byte_val = int.from_bytes(f.read(1), 'big')
+                count = int.from_bytes(f.read(4), 'big')
+                freq[byte_val] = count
+            
+            padding = int.from_bytes(f.read(1), 'big')
+            
+            encoded_bits = bitarray()
+            encoded_bits.fromfile(f)
+            if padding > 0:
+                encoded_bits = encoded_bits[:-padding]
+        
+        # Rebuild codes
+        items = sorted(freq.items(), key=lambda x: x[1], reverse=True)
+        codes = {}
+        self._shannon_fano_encode(items, 0, len(items), codes, "")
+        reverse_codes = {v: k for k, v in codes.items()}
+        
+        # Decode
+        result = bytearray()
+        current_code = ""
+        for bit in encoded_bits.to01():
+            current_code += bit
+            if current_code in reverse_codes:
+                result.append(reverse_codes[current_code])
+                current_code = ""
+                if len(result) >= orig_size:
+                    break
+        
+        return bytes(result)

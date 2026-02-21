@@ -16,6 +16,13 @@ import logging
 from multiprocessing import Pool, cpu_count
 from bitarray import bitarray
 
+# Import constants for folder structure
+from constants import (
+    outputHuffmanAudio,
+    outputAdaptiveHuffmanAudio,
+    outputShannonAudio
+)
+
 # Try to import pydub, but make it optional
 try:
     from pydub import AudioSegment
@@ -56,20 +63,14 @@ class AudioCompressor:
     ALGORITHM_EXTENSIONS = {
         'huffman': '.huf',
         'adaptive_huffman': '.ahuf',
-        'shannon_fano': '.sf',
-        'delta': '.delta',
-        'rle': '.rle',
-        'delta_rle': '.deltarle'
+        'shannon_fano': '.sf'
     }
     
-    # Folder names for each algorithm
+    # Folder names for each algorithm (using new constants for standardized folder structure)
     ALGORITHM_FOLDERS = {
-        'huffman': 'huffman_audio',
-        'adaptive_huffman': 'adaptive_huffman_audio',
-        'shannon_fano': 'shannon_fano_audio',
-        'delta': 'delta_audio',
-        'rle': 'rle_audio',
-        'delta_rle': 'delta_rle_audio'
+        'huffman': outputHuffmanAudio,
+        'adaptive_huffman': outputAdaptiveHuffmanAudio,
+        'shannon_fano': outputShannonAudio
     }
     
     def __init__(self, base_output_dir='./files/outputs'):
@@ -83,17 +84,14 @@ class AudioCompressor:
     
     def _create_output_directories(self):
         """Create output directories for all algorithms"""
-        for folder_name in self.ALGORITHM_FOLDERS.values():
-            folder_path = os.path.join(self.base_output_dir, folder_name)
+        for folder_path in self.ALGORITHM_FOLDERS.values():
             os.makedirs(folder_path, exist_ok=True)
     
     def _get_output_path(self, input_path: str, algorithm: str) -> str:
         """Generate output path with correct extension and folder"""
         base_name = os.path.splitext(os.path.basename(input_path))[0]
         extension = self.ALGORITHM_EXTENSIONS.get(algorithm, '.compressed')
-        folder_name = self.ALGORITHM_FOLDERS.get(algorithm, 'compressed_audio')
-        
-        output_dir = os.path.join(self.base_output_dir, folder_name)
+        output_dir = self.ALGORITHM_FOLDERS.get(algorithm, './files/outputs/compressed_audio')
         os.makedirs(output_dir, exist_ok=True)
         
         return os.path.join(output_dir, f"{base_name}{extension}")
@@ -119,9 +117,6 @@ class AudioCompressor:
                     if wav_file.getnchannels() == 2:
                         audio_float = audio_float.reshape(-1, 2).mean(axis=1)
                     
-                    # Apply preprocessing for better compression
-                    audio_float = self._preprocess_audio(audio_float)
-                    
                     return audio_float, sample_rate
             else:
                 # For MP3, OGG, and other compressed formats, read as binary
@@ -135,46 +130,11 @@ class AudioCompressor:
                 audio_data = np.frombuffer(binary_data, dtype=np.uint8).astype(np.float32)
                 audio_data = (audio_data / 127.5) - 1.0  # Normalize to -1 to 1
                 
-                # Apply preprocessing
-                audio_data = self._preprocess_audio(audio_data)
-                
                 # Return dummy sample rate (not applicable for binary data)
                 return audio_data, 44100
         except Exception as e:
             logger.error(f"Error loading audio file {file_path}: {e}")
             raise
-    
-    def _preprocess_audio(self, audio_data: np.ndarray) -> np.ndarray:
-        """Apply preprocessing to improve compression ratios"""
-        # Remove DC offset (mean normalization)
-        audio_data = audio_data - np.mean(audio_data)
-        
-        # Apply gentle noise gate to reduce very low-level noise
-        threshold = 0.001  # Very low threshold to avoid audible artifacts
-        audio_data = np.where(np.abs(audio_data) < threshold, 0, audio_data)
-        
-        # Apply gentle compression to reduce dynamic range
-        # This helps compression algorithms work better
-        max_val = np.max(np.abs(audio_data))
-        if max_val > 0:
-            # Soft knee compression
-            knee_threshold = 0.7 * max_val
-            ratio = 0.8  # Gentle compression
-            
-            compressed = np.where(
-                np.abs(audio_data) > knee_threshold,
-                np.sign(audio_data) * (knee_threshold + 
-                    (np.abs(audio_data) - knee_threshold) * ratio),
-                audio_data
-            )
-            audio_data = compressed
-        
-        # Normalize to prevent clipping
-        max_val = np.max(np.abs(audio_data))
-        if max_val > 0.95:  # Leave some headroom
-            audio_data = audio_data * (0.95 / max_val)
-        
-        return audio_data
     
     def save_audio(self, audio_data: np.ndarray, sample_rate: int, output_path: str, output_format: str = 'wav'):
         """Save audio data to file in specified format (wav, mp3, ogg)"""
@@ -241,62 +201,6 @@ class AudioCompressor:
         
         return heap[0] if heap else None
     
-    def build_balanced_huffman_tree(self, freq_dict):
-        """Build balanced Huffman tree with improved tie-breaking"""
-        heap = [HuffmanNode(symbol=sym, freq=freq) for sym, freq in freq_dict.items()]
-        heapq.heapify(heap)
-        
-        while len(heap) > 1:
-            left = heapq.heappop(heap)
-            right = heapq.heappop(heap)
-            
-            # Improved tie-breaking for better tree balance
-            if left.freq == right.freq:
-                # Prefer nodes with symbols over internal nodes
-                if left.symbol is not None and right.symbol is None:
-                    left, right = right, left
-                elif left.symbol is None and right.symbol is not None:
-                    pass  # Keep as is
-                # If both have symbols or both are internal, use symbol value
-                elif left.symbol is not None and right.symbol is not None:
-                    if left.symbol > right.symbol:
-                        left, right = right, left
-            
-            merged = HuffmanNode(freq=left.freq + right.freq, left=left, right=right)
-            heapq.heappush(heap, merged)
-        
-        return heap[0] if heap else None
-    
-    def generate_canonical_codes(self, root):
-        """Generate canonical Huffman codes for better compression"""
-        # Get all leaf nodes with their depths
-        leaf_nodes = []
-        
-        def traverse(node, depth=0):
-            if node is None:
-                return
-            if node.symbol is not None:
-                leaf_nodes.append((node.symbol, depth))
-            traverse(node.left, depth + 1)
-            traverse(node.right, depth + 1)
-        
-        traverse(root)
-        
-        # Sort by depth, then by symbol value
-        leaf_nodes.sort(key=lambda x: (x[1], x[0]))
-        
-        # Generate canonical codes
-        current_code = 0
-        prev_depth = 0
-        
-        for symbol, depth in leaf_nodes:
-            if depth > prev_depth:
-                current_code <<= (depth - prev_depth)
-            
-            self.huffman_codes[symbol] = format(current_code, f'0{depth}b')
-            current_code += 1
-            prev_depth = depth
-    
     def generate_huffman_codes(self, node, prefix=""):
         """Generate Huffman codes from tree"""
         if node is None:
@@ -310,75 +214,49 @@ class AudioCompressor:
         self.generate_huffman_codes(node.right, prefix + "1")
     
     def huffman_encode(self, data):
-        """Improved Huffman encoding with canonical codes and better tree balancing"""
+        """Fast Huffman encoding using bitarray with optimized binary handling"""
         # Handle different input types
         if isinstance(data, bytes):
             quantized = np.frombuffer(data, dtype=np.uint8)
             precision = 8
         else:
-            # Adaptive precision based on data range
-            data_min, data_max = np.min(data), np.max(data)
-            if data_max - data_min < 0.1:
-                quantized = np.round(data * 255).astype(np.uint8).flatten()
-                precision = 8
-            else:
-                quantized = np.round(data * 1023).astype(np.int16).flatten()
-                precision = 10
+            quantized = np.round(data * 1023).astype(np.int16).flatten()
+            precision = 10
         
         total_samples = len(quantized)
         show_progress = total_samples > 100000
         
-        # Optimized frequency count with filtering
+        # Fast frequency count using numpy
         if precision == 8:
             freq_array = np.bincount(quantized, minlength=256)
-            # Filter out very low frequency symbols for better compression
-            threshold = max(1, total_samples // 10000)
-            freq_dict = {i: int(freq_array[i]) for i in range(256) if freq_array[i] >= threshold}
+            freq_dict = {i: int(freq_array[i]) for i in range(256) if freq_array[i] > 0}
         else:
             freq_dict = Counter(quantized)
-            # Remove rare symbols
-            threshold = max(1, total_samples // 10000)
-            freq_dict = {k: v for k, v in freq_dict.items() if v >= threshold}
         
-        # Build improved Huffman tree with tie-breaking
-        root = self.build_balanced_huffman_tree(freq_dict)
-        
-        # Generate canonical Huffman codes for better compression
+        # Build Huffman tree
+        root = self.build_huffman_tree(freq_dict)
         self.huffman_codes.clear()
-        self.generate_canonical_codes(root)
+        self.generate_huffman_codes(root)
         
-        # Convert codes to bitarrays once for performance
+        # Convert codes to bitarrays once
         code_bits = {k: bitarray(v) for k, v in self.huffman_codes.items()}
         
-        # Optimized encoding with memory efficiency
+        # Use numpy for ultra-fast encoding
         encoded = bitarray()
-        CHUNK_SIZE = 1000000  # Reduced chunk size for better memory usage
-        
-        # Pre-allocation not available in this bitarray version
-        # Skip reserve() as it's not supported
+        CHUNK_SIZE = 2000000  # 2M samples at a time
         
         for i in range(0, total_samples, CHUNK_SIZE):
             chunk = quantized[i:i+CHUNK_SIZE]
-            # Use lookup table for faster encoding
             for sample in chunk:
-                if sample in code_bits:
-                    encoded.extend(code_bits[sample])
-                else:
-                    # Use escape code for rare symbols
-                    encoded.extend(code_bits.get(0, '0'))
+                encoded.extend(code_bits[sample])
             
             if show_progress and i % (total_samples // 5) < CHUNK_SIZE:
                 progress_bar(min(i + CHUNK_SIZE, total_samples), total_samples, prefix="  Encoding")
-            
-            # Force garbage collection for large files
-            if i % (CHUNK_SIZE * 5) == 0 and total_samples > 10000000:
-                import gc
-                gc.collect()
         
         if show_progress:
             print()
         
-        # Optimized padding
+        # Add padding
         padding = (8 - len(encoded) % 8) % 8
         encoded.extend('0' * padding)
         
@@ -415,121 +293,108 @@ class AudioCompressor:
         decoded_array = np.array(decoded_samples, dtype=np.float32) / max_val
         return decoded_array
     
+    def shannon_fano_decode(self, encoded_data, metadata):
+        """Decode Shannon-Fano encoded audio data"""
+        codes = metadata['codes']
+        padding = metadata['padding']
+        precision = metadata.get('precision', 10)
+        
+        # Convert bytes back to bits using bitarray
+        encoded_bits = bitarray()
+        encoded_bits.frombytes(encoded_data)
+        if padding > 0:
+            encoded_bits = encoded_bits[:-padding]
+        
+        # Create reverse lookup
+        code_to_symbol = {v: k for k, v in codes.items()}
+        
+        # Decode using bitarray
+        decoded_samples = []
+        current_code = ""
+        
+        for bit in encoded_bits.to01():
+            current_code += bit
+            if current_code in code_to_symbol:
+                decoded_samples.append(code_to_symbol[current_code])
+                current_code = ""
+        
+        # Convert back to float with correct precision
+        max_val = 2 ** (precision - 1) - 1
+        decoded_array = np.array(decoded_samples, dtype=np.float32) / max_val
+        return decoded_array
+    
     def adaptive_huffman_encode(self, data):
-        """Improved Adaptive Huffman with dynamic model updates and better precision"""
-        # Dynamic tree rebuild interval based on data size
+        """Ultra-fast Adaptive Huffman - rebuilds tree every 100K samples"""
+        TREE_REBUILD_INTERVAL = 100000  # Rebuild much less frequently
+        
+        # Handle different input types
         if isinstance(data, bytes):
             quantized = np.frombuffer(data, dtype=np.uint8)
             precision = 8
-            total_samples = len(quantized)
         else:
-            # Adaptive precision based on data characteristics
-            data_range = np.ptp(data)  # Peak-to-peak
-            if data_range < 0.5:
-                quantized = np.round(data * 127).astype(np.int8).flatten()
-                precision = 7
-            elif data_range < 1.0:
-                quantized = np.round(data * 255).astype(np.uint8).flatten()
-                precision = 8
-            else:
-                quantized = np.round(data * 511).astype(np.int16).flatten()
-                precision = 10
-            total_samples = len(quantized)
+            # Reduce precision for speed and compression
+            quantized = np.round(data * 255).astype(np.int16).flatten()  # 8-bit
+            precision = 8
         
-        # Dynamic rebuild interval
-        TREE_REBUILD_INTERVAL = min(50000, max(10000, total_samples // 20))
-        
+        total_samples = len(quantized)
         show_progress = total_samples > 50000
+        
         if show_progress:
             print(f"  Adaptive Huffman: Processing {total_samples:,} samples...")
         
-        # Initialize with empty model
-        freq_dict = {}
-        encoded = bitarray()
-        temp_codes = {}  # Initialize outside the loop
+        # Pre-calculate all frequencies at once (much faster)
+        freq_dict = Counter(quantized)
+        symbols = list(freq_dict.keys())
         
-        # Adaptive encoding with dynamic model
+        # Build tree once initially
+        root = self.build_huffman_tree(dict(freq_dict))
+        temp_codes = {}
+        
+        def generate_codes(node, prefix=""):
+            if node is None:
+                return
+            if node.symbol is not None:
+                temp_codes[node.symbol] = prefix
+                return
+            generate_codes(node.left, prefix + "0")
+            generate_codes(node.right, prefix + "1")
+        
+        generate_codes(root)
+        
+        # Use bitarray for speed
+        encoded = bitarray()
+        
+        # Single pass encoding with periodic updates
         for i in range(0, total_samples, TREE_REBUILD_INTERVAL):
             chunk = quantized[i:i+TREE_REBUILD_INTERVAL]
             
-            # Update frequency model with new symbols
-            for sample in chunk:
-                freq_dict[sample] = freq_dict.get(sample, 0) + 1
-            
-            # Rebuild tree periodically
-            if i % (TREE_REBUILD_INTERVAL * 2) == 0 or i == 0:
-                # Filter very rare symbols for efficiency
-                filtered_dict = {k: v for k, v in freq_dict.items() 
-                              if v >= max(1, len(quantized) // 5000)}
-                root = self.build_balanced_huffman_tree(filtered_dict)
-                temp_codes.clear()
-                
-                def generate_codes(node, prefix=""):
-                    if node is None:
-                        return
-                    if node.symbol is not None:
-                        temp_codes[node.symbol] = prefix
-                        return
-                    generate_codes(node.left, prefix + "0")
-                    generate_codes(node.right, prefix + "1")
-                
-                generate_codes(root)
-            
             # Encode chunk with current codes
             for sample in chunk:
-                code = temp_codes.get(sample)
-                if code:
-                    encoded.extend(code)
-                else:
-                    # Escape code for unknown symbols
-                    encoded.extend('11111111')
-                    # Add symbol value directly
-                    bit_val = format(sample & ((1 << precision) - 1), f'0{precision}b')
-                    encoded.extend(bit_val)
+                encoded.extend(temp_codes.get(sample, temp_codes.get(0, '0')))
             
-            if show_progress and i % (TREE_REBUILD_INTERVAL * 2) == 0:
+            if show_progress:
                 progress_bar(min(i + TREE_REBUILD_INTERVAL, total_samples), total_samples, 
                            prefix="  Adaptive Huffman")
         
         if show_progress:
-            print()
+            print()  # New line after progress bar
         
-        # Optimized padding
+        # Add padding
         padding = (8 - len(encoded) % 8) % 8
         encoded.extend('0' * padding)
         
-        metadata = {
-            'padding': padding, 
-            'final_symbols': list(freq_dict.keys()),
-            'precision': precision,
-            'rebuild_interval': TREE_REBUILD_INTERVAL
-        }
-        
-        return encoded.tobytes(), metadata
+        return encoded.tobytes(), {'padding': padding, 'initial_symbols': symbols, 'precision': precision}
     
     def shannon_fano_encode(self, data):
-        """Improved Shannon-Fano encoding with optimal splitting and adaptive precision"""
-        # Handle different input types with adaptive precision
+        """Ultra-fast Shannon-Fano encoding using bitarray"""
+        # Handle different input types
         if isinstance(data, bytes):
             quantized = np.frombuffer(data, dtype=np.uint8)
             precision = 8
         else:
-            # Analyze data characteristics for optimal precision
-            data_std = np.std(data)
-            data_range = np.ptp(data)
-            
-            if data_range < 0.25 and data_std < 0.1:
-                quantized = np.round(data * 63).astype(np.int8).flatten()
-                precision = 6
-            elif data_range < 0.5:
-                quantized = np.round(data * 127).astype(np.int8).flatten()
-                precision = 7
-            elif data_range < 1.0:
-                quantized = np.round(data * 255).astype(np.uint8).flatten()
-                precision = 8
-            else:
-                quantized = np.round(data * 1023).astype(np.int16).flatten()
-                precision = 10
+            # Reduce precision for better compression
+            quantized = np.round(data * 1023).astype(np.int16).flatten()  # 10-bit
+            precision = 10
         
         total_samples = len(quantized)
         show_progress = total_samples > 50000
@@ -537,86 +402,54 @@ class AudioCompressor:
         if show_progress:
             print(f"  Shannon-Fano: Processing {total_samples:,} samples...")
         
-        # Calculate frequencies with filtering
+        # Calculate frequencies
         freq_dict = Counter(quantized)
-        # Remove very rare symbols for better compression
-        threshold = max(1, total_samples // 8000)
-        freq_dict = {k: v for k, v in freq_dict.items() if v >= threshold}
         
         if show_progress:
             print(f"  Building tree with {len(freq_dict)} symbols...")
         
-        # Sort by frequency (descending)
+        # Sort by frequency
         sorted_symbols = sorted(freq_dict.items(), key=lambda x: x[1], reverse=True)
         
-        # Build improved Shannon-Fano codes with optimal splitting
+        # Build Shannon-Fano codes
         codes = {}
-        
-        def optimal_split(symbols):
-            """Find optimal split point for Shannon-Fano coding"""
-            if len(symbols) <= 1:
-                return 0
-            
-            total_freq = sum(freq for _, freq in symbols)
-            best_split = 0
-            best_balance = float('inf')
-            
-            # Try different split points to find the most balanced one
-            for i in range(1, len(symbols)):
-                left_freq = sum(freq for _, freq in symbols[:i])
-                right_freq = total_freq - left_freq
-                balance = abs(left_freq - right_freq)
-                
-                if balance < best_balance:
-                    best_balance = balance
-                    best_split = i
-                elif balance > best_balance * 1.5:  # Stop if we're getting worse
-                    break
-            
-            return best_split
         
         def build_codes(symbols, prefix=""):
             if len(symbols) == 1:
                 codes[symbols[0][0]] = prefix
                 return
             
-            split_idx = optimal_split(symbols)
+            total_freq = sum(freq for _, freq in symbols)
+            cumulative = 0
+            split_idx = 0
             
-            # Ensure we don't create empty groups
-            if split_idx == 0:
-                split_idx = 1
-            elif split_idx == len(symbols):
-                split_idx = len(symbols) - 1
+            for i, (_, freq) in enumerate(symbols):
+                cumulative += freq
+                if cumulative >= total_freq / 2:
+                    split_idx = i + 1
+                    break
             
             build_codes(symbols[:split_idx], prefix + "0")
             build_codes(symbols[split_idx:], prefix + "1")
         
         build_codes(sorted_symbols)
         
-        # Optimized encoding with bitarray
+        # Use bitarray for ultra-fast encoding
         encoded = bitarray()
         CHUNK_SIZE = 500000
         
         for i in range(0, total_samples, CHUNK_SIZE):
             chunk = quantized[i:i+CHUNK_SIZE]
             for sample in chunk:
-                code = codes.get(sample)
-                if code:
-                    encoded.extend(code)
-                else:
-                    # Escape code for unknown symbols
-                    encoded.extend('11111111')
-                    # Add raw symbol value
-                    bit_val = format(sample & ((1 << precision) - 1), f'0{precision}b')
-                    encoded.extend(bit_val)
+                encoded.extend(codes[sample])
             
             if show_progress:
                 progress_bar(min(i + CHUNK_SIZE, total_samples), total_samples, prefix="  Encoding")
         
         if show_progress:
-            print()
+            print()  # New line after progress bar
         
-        # Optimized padding
+        # Add padding
         padding = (8 - len(encoded) % 8) % 8
         encoded.extend('0' * padding)
         
@@ -866,7 +699,6 @@ class AudioCompressor:
 
         
         # Apply compression algorithm
-<<<<<<< HEAD
         import json
         
         def convert_metadata_for_json(metadata):
@@ -878,7 +710,7 @@ class AudioCompressor:
                     converted[key] = {int(k): v for k, v in value.items()}
                 elif key == 'freq_dict':
                     converted[key] = {int(k): int(v) for k, v in value.items()}
-                elif key in ['initial_symbols', 'final_symbols']:
+                elif key == 'initial_symbols':
                     converted[key] = [int(x) for x in value]
                 elif isinstance(value, np.integer):
                     converted[key] = int(value)
@@ -893,44 +725,37 @@ class AudioCompressor:
             # Save metadata and compressed data together
             metadata['sample_rate'] = sample_rate
             metadata_serializable = convert_metadata_for_json(metadata)
-            metadata_json = json.dumps(metadata_serializable)
-            metadata_bytes = metadata_json.encode('utf-8') if isinstance(metadata_json, str) else str(metadata_json).encode('utf-8')
-=======
-        if algorithm == "huffman":
-            compressed_data_bytes, metadata = self.huffman_encode(audio_data)
->>>>>>> parent of abf10e7 (added audio compression and decompression and updated folder structure)
+            metadata_bytes = json.dumps(metadata_serializable).encode('utf-8')
             with open(output_path, 'wb') as f:
+                f.write(struct.pack('>I', len(metadata_bytes)))  # 4 bytes for metadata length
+                f.write(metadata_bytes)
                 f.write(compressed_data_bytes)
             compressed_data = self.huffman_decode(compressed_data_bytes, metadata)
             compressed_data = compressed_data[:len(audio_data)]
             
         elif algorithm == "adaptive_huffman":
             compressed_data_bytes, metadata = self.adaptive_huffman_encode(audio_data)
-<<<<<<< HEAD
             # Save metadata and compressed data together
             metadata['sample_rate'] = sample_rate
             metadata_serializable = convert_metadata_for_json(metadata)
-            metadata_json = json.dumps(metadata_serializable)
-            metadata_bytes = metadata_json.encode('utf-8') if isinstance(metadata_json, str) else str(metadata_json).encode('utf-8')
-=======
->>>>>>> parent of abf10e7 (added audio compression and decompression and updated folder structure)
+            metadata_bytes = json.dumps(metadata_serializable).encode('utf-8')
             with open(output_path, 'wb') as f:
+                f.write(struct.pack('>I', len(metadata_bytes)))  # 4 bytes for metadata length
+                f.write(metadata_bytes)
                 f.write(compressed_data_bytes)
             compressed_data = audio_data
                 
         elif algorithm == "shannon_fano":
             compressed_data_bytes, metadata = self.shannon_fano_encode(audio_data)
-<<<<<<< HEAD
             # Save metadata and compressed data together
             metadata['sample_rate'] = sample_rate
             metadata_serializable = convert_metadata_for_json(metadata)
-            metadata_json = json.dumps(metadata_serializable)
-            metadata_bytes = metadata_json.encode('utf-8') if isinstance(metadata_json, str) else str(metadata_json).encode('utf-8')
-=======
->>>>>>> parent of abf10e7 (added audio compression and decompression and updated folder structure)
+            metadata_bytes = json.dumps(metadata_serializable).encode('utf-8')
             with open(output_path, 'wb') as f:
+                f.write(struct.pack('>I', len(metadata_bytes)))  # 4 bytes for metadata length
+                f.write(metadata_bytes)
                 f.write(compressed_data_bytes)
-            compressed_data = self.huffman_decode(compressed_data_bytes, metadata)
+            compressed_data = self.shannon_fano_decode(compressed_data_bytes, metadata)
             compressed_data = compressed_data[:len(audio_data)]
             
         else:

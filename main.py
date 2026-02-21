@@ -3,13 +3,11 @@ from compressor import compare_all_techniques_with_choice,_run_huffman,_run_adap
 from imageCompression import   compare_all_image_techniques_with_choice
 from decompressor import huffmanDecompression, shanonDecompression, adaptiveHuffmanDecompression
 import glob
-from shannonfano import shannonImageCompression, _run_shannon_fano
-from huffman import huffmanImageCompression
-from adaptivehuffman import adaptiveHuffmanImageCompression
+from shanonfanofunctions import _run_shannon_fano,shannonImageCompression
+from huffmanFunctions import huffmanImageCompression
+from adaptiveHuffmanfunctions import adaptiveHuffmanImageCompression
 from audio_compression import AudioCompressor
-<<<<<<< HEAD
 from audioDecompressor import huffman_audio_decompression, adaptive_huffman_audio_decompression, shannon_fano_audio_decompression
-from imageDecompressor import huffmanImageDecompression, shannonImageDecompression, adaptiveHuffmanImageDecompression
 from constants import (
     filePath, inputFiles, outputFiles,
     outputHuffmanFiles, outputHuffmanText, outputHuffmanImage, outputHuffmanAudio,
@@ -19,31 +17,6 @@ from constants import (
     outputAdaptiveHuffmannFiles, outputAdaptiveHuffmanText, outputAdaptiveHuffmanImage, outputAdaptiveHuffmanAudio,
     outputAdaptiveHuffmanDecompressedText, outputAdaptiveHuffmanDecompressedImage, outputAdaptiveHuffmanDecompressedAudio
 )
-=======
-
-# File paths
-filePath = "./files"
-inputFiles = f"{filePath}/inputs"
-outputFiles = f"{filePath}/outputs"
-outputHuffmanFiles = f"{outputFiles}/huffmann_files"
-outputShannonFiles = f"{outputFiles}/shannon_files"
-outputAdaptiveHuffmanFiles = f"{outputFiles}/adaptive_huffman_files"
-
-# Create ALL directories
-os.makedirs(inputFiles, exist_ok=True)
-os.makedirs(outputHuffmanFiles, exist_ok=True)
-os.makedirs(outputShannonFiles, exist_ok=True)
-os.makedirs(outputAdaptiveHuffmanFiles, exist_ok=True)
-
-# Audio compression directories (will be created automatically by AudioCompressor)
-# Each algorithm has its own folder:
-# - huffman_audio/ (*.huff)
-# - adaptive_huffman_audio/ (*.ahuff)
-# - shannon_fano_audio/ (*.sf)
-# - delta_audio/ (*.delta)
-# - dpcm_audio/ (*.dpcm)
-# - adaptive_quant_audio/ (*.adaptive)
->>>>>>> parent of abf10e7 (added audio compression and decompression and updated folder structure)
 
 def selectTextFile():
     """Select a text file for compression"""
@@ -231,21 +204,41 @@ def decompressionChoice():
     except ValueError:
             print("Invalid input. Please enter a number.")
 
-def selectCompressedFile(algorithm):
+def selectCompressedFile(algorithm, file_type="text"):
     """Select a compressed file for decompression"""
     
+    print(f"\n Available {algorithm.upper()} compressed {file_type} files:")
     
-    print(f"\n Available {algorithm.upper()} compressed files:")
-    
-    # Define directories and extensions for each algorithm
+    # Define directories and extensions for each algorithm and file type
     if algorithm == "huffman":
-        compressed_dir = outputHuffmanFiles
+        if file_type == "text":
+            compressed_dir = outputHuffmanText
+        elif file_type == "image":
+            compressed_dir = outputHuffmanImage
+        elif file_type == "audio":
+            compressed_dir = outputHuffmanAudio
+        else:
+            compressed_dir = outputHuffmanFiles
         extensions = ['*.huf']
-    elif algorithm == "shannon" or algorithm == "shannon":
-        compressed_dir = outputShannonFiles
+    elif algorithm == "shannon":
+        if file_type == "text":
+            compressed_dir = outputShannonText
+        elif file_type == "image":
+            compressed_dir = outputShannonImage
+        elif file_type == "audio":
+            compressed_dir = outputShannonAudio
+        else:
+            compressed_dir = outputShannonFiles
         extensions = ['*.sf']
     elif algorithm == "adaptive":
-        compressed_dir = outputAdaptiveHuffmanFiles
+        if file_type == "text":
+            compressed_dir = outputAdaptiveHuffmanText
+        elif file_type == "image":
+            compressed_dir = outputAdaptiveHuffmanImage
+        elif file_type == "audio":
+            compressed_dir = outputAdaptiveHuffmanAudio
+        else:
+            compressed_dir = outputAdaptiveHuffmannFiles
         extensions = ['*.ahuf']
     else:
         print("Invalid algorithm")
@@ -257,7 +250,7 @@ def selectCompressedFile(algorithm):
         available_files.extend(glob.glob(f"{compressed_dir}/*{ext.upper()}"))
     
     if not available_files:
-        print(f"No {algorithm.upper()} compressed files found in outputs folder.")
+        print(f"No {algorithm.upper()} compressed {file_type} files found in outputs folder.")
         return None
     
     # Remove duplicates and sort
@@ -301,21 +294,16 @@ def textFileChoice():
         except ValueError:
             print("Invalid input. Please enter a number.")
 
-<<<<<<< HEAD
-=======
 def huffmanImageDecompression():
     """Decompress Huffman compressed image"""
     print("\n  Available Huffman compressed images:")
     
-    # Get image files with .huf extension
+    # Get image files with .huf extension from image subfolder
     import glob
     huffman_images = []
     for ext in ['*.huf']:
-        huffman_images.extend(glob.glob(f"{outputHuffmanFiles}/*{ext}"))
-        huffman_images.extend(glob.glob(f"{outputHuffmanFiles}/*{ext.upper()}"))
-    
-    # Filter only image files (exclude text files)
-    huffman_images = [f for f in huffman_images if not any(f.endswith(ext) for ext in ['.txt'])]
+        huffman_images.extend(glob.glob(f"{outputHuffmanImage}/*{ext}"))
+        huffman_images.extend(glob.glob(f"{outputHuffmanImage}/*{ext.upper()}"))
     
     if not huffman_images:
         print("No Huffman compressed images found.")
@@ -341,12 +329,12 @@ def huffmanImageDecompression():
     # Use text decompression on the image file (they're all binary anyway)
     print(f"\n Decompressing {os.path.basename(selected_image)}...")
     
-    # Create dummy decompressed file with original image extension
+    # Create dummy decompressed file with original image extension in decompressed/image subfolder
     base_name = os.path.splitext(os.path.basename(selected_image))[0]
     
     # Try to detect original image type or default to .jpg
     image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp']
-    output_file = f"{outputHuffmanFiles}/{base_name}.jpg"  # Default to jpg
+    output_file = f"{outputHuffmanDecompressedImage}/{base_name}.jpg"  # Default to jpg in decompressed folder
     
     print(f"Huffman image decompression complete!")
     print(f"   Compressed file: {os.path.getsize(selected_image):,} bytes")
@@ -393,11 +381,8 @@ def shannonImageDecompression():
     import glob
     shannon_images = []
     for ext in ['*.sf']:
-        shannon_images.extend(glob.glob(f"{outputShannonFiles}/*{ext}"))
-        shannon_images.extend(glob.glob(f"{outputShannonFiles}/*{ext.upper()}"))
-    
-    # Filter only image files (exclude text files)
-    shannon_images = [f for f in shannon_images if not any(f.endswith(ext) for ext in ['.txt'])]
+        shannon_images.extend(glob.glob(f"{outputShannonImage}/*{ext}"))
+        shannon_images.extend(glob.glob(f"{outputShannonImage}/*{ext.upper()}"))
     
     if not shannon_images:
         print("No Shannon-Fano compressed images found.")
@@ -423,37 +408,22 @@ def shannonImageDecompression():
     print(f"\n Decompressing {os.path.basename(selected_image)}...")
     
     base_name = os.path.splitext(os.path.basename(selected_image))[0]
-    output_file = f"{outputShannonFiles}/{base_name}.jpg"  # Default to jpg
-    
-    print(f"Shannon-Fano image decompression complete!")
-    print(f"   Compressed file: {os.path.getsize(selected_image):,} bytes")
-    print(f"   Output saved to: {output_file}")
+    output_file = f"{outputShannonDecompressedImage}/{base_name}.jpg"  # Default to jpg in decompressed folder
     
     try:
-        # Find and restore the original image
-        base_name = os.path.splitext(os.path.basename(selected_image))[0]
+        from shanonCompressor import ShannonFanoCompressor
+        compressor = ShannonFanoCompressor()
+        decompressed_data = compressor.decompress_image(selected_image)
         
-        # Try different original image extensions
-        original_extensions = ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.webp']
-        original_image = None
-        
-        for ext in original_extensions:
-            potential_original = f"{inputFiles}/{base_name}{ext}"
-            if os.path.exists(potential_original):
-                original_image = potential_original
-                break
-        
-        if original_image:
-            # Copy the original image
-            with open(original_image, 'rb') as src, open(output_file, 'wb') as dst:
-                dst.write(src.read())
-            print(f"   Restored original image: {os.path.getsize(output_file):,} bytes")
+        if decompressed_data:
+            with open(output_file, 'wb') as f:
+                f.write(decompressed_data)
+            print(f"Shannon-Fano image decompression complete!")
+            print(f"   Compressed file: {os.path.getsize(selected_image):,} bytes")
+            print(f"   Decompressed file: {os.path.getsize(output_file):,} bytes")
+            print(f"   Output saved to: {output_file}")
         else:
-            # Fallback: create a placeholder image file
-            print(f"   Original image not found, creating placeholder...")
-            with open(output_file, 'wb') as dst:
-                dst.write(b'PLACEHOLDER - Original image not found for decompression')
-            print(f"   Placeholder created: {os.path.getsize(output_file):,} bytes")
+            raise Exception("Decompression returned no data")
                 
     except Exception as e:
         print(f"   Error: {e}")
@@ -471,11 +441,8 @@ def adaptiveHuffmanImageDecompression():
     import glob
     adaptive_images = []
     for ext in ['*.ahuf']:
-        adaptive_images.extend(glob.glob(f"{outputAdaptiveHuffmanFiles}/*{ext}"))
-        adaptive_images.extend(glob.glob(f"{outputAdaptiveHuffmanFiles}/*{ext.upper()}"))
-    
-    # Filter only image files (exclude text files)
-    adaptive_images = [f for f in adaptive_images if not any(f.endswith(ext) for ext in ['.txt'])]
+        adaptive_images.extend(glob.glob(f"{outputAdaptiveHuffmanImage}/*{ext}"))
+        adaptive_images.extend(glob.glob(f"{outputAdaptiveHuffmanImage}/*{ext.upper()}"))
     
     if not adaptive_images:
         print("No Adaptive Huffman compressed images found.")
@@ -501,7 +468,7 @@ def adaptiveHuffmanImageDecompression():
     print(f"\n Decompressing {os.path.basename(selected_image)}...")
     
     base_name = os.path.splitext(os.path.basename(selected_image))[0]
-    output_file = f"{outputAdaptiveHuffmanFiles}/{base_name}.jpg"  # Default to jpg
+    output_file = f"{outputAdaptiveHuffmanDecompressedImage}/{base_name}.jpg"  # Default to jpg in decompressed folder
     
     print(f"Adaptive Huffman image decompression complete!")
     print(f"   Compressed file: {os.path.getsize(selected_image):,} bytes")
@@ -542,7 +509,6 @@ def adaptiveHuffmanImageDecompression():
         except:
             print(f"   Could not create output file")
 
->>>>>>> parent of abf10e7 (added audio compression and decompression and updated folder structure)
 def imageFileChoice():
     """Handle image file compression/decompression"""
     while True:
@@ -743,28 +709,68 @@ def compareAllAudioTechniques():
     elif table_results:
         print(f"\n Best performing technique: {table_results[0]['name']} with {table_results[0]['savings']:.1f}% compression\n")
 
+def decompressAudioFile(algorithm):
+    """Decompress audio file with specified algorithm"""
+    if algorithm == "huffman":
+        huffman_audio_decompression()
+    elif algorithm == "adaptive_huffman":
+        adaptive_huffman_audio_decompression()
+    elif algorithm == "shannon_fano":
+        shannon_fano_audio_decompression()
+
 def audioFileChoice():
-    """Handle audio file compression (Huffman, Adaptive Huffman, Shannon-Fano)"""
+    """Handle audio file compression and decompression"""
     while True:
         print("\n--- Audio File Menu ---")
-        print("1. Huffman Compression (.huff)")
-        print("2. Adaptive Huffman Compression (.ahuff)")
-        print("3. Shannon-Fano Compression (.sf)")
-        print("4. Compare All Techniques")
-        print("5. Back to Main Menu")
+        print("1. Compress Audio")
+        print("2. Decompress Audio")
+        print("3. Back to Main Menu")
         
         try:
             choice = int(input("Your choice: "))
             
             if choice == 1:
-                compressAudioFile("huffman")
+                print("\n--- Audio Compression Menu ---")
+                print("1. Huffman Compression")
+                print("2. Adaptive Huffman Compression")
+                print("3. Shannon-Fano Compression")
+                print("4. Compare All Techniques")
+                print("5. Back to Audio Menu")
+                
+                comp_choice = int(input("Your choice: "))
+                
+                if comp_choice == 1:
+                    compressAudioFile("huffman")
+                elif comp_choice == 2:
+                    compressAudioFile("adaptive_huffman")
+                elif comp_choice == 3:
+                    compressAudioFile("shannon_fano")
+                elif comp_choice == 4:
+                    compareAllAudioTechniques()
+                elif comp_choice == 5:
+                    continue
+                else:
+                    print("Invalid choice. Please try again.")
             elif choice == 2:
-                compressAudioFile("adaptive_huffman")
+                print("\n--- Audio Decompression Menu ---")
+                print("1. Huffman Decompression")
+                print("2. Adaptive Huffman Decompression")
+                print("3. Shannon-Fano Decompression")
+                print("4. Back to Audio Menu")
+                
+                decomp_choice = int(input("Your choice: "))
+                
+                if decomp_choice == 1:
+                    decompressAudioFile("huffman")
+                elif decomp_choice == 2:
+                    decompressAudioFile("adaptive_huffman")
+                elif decomp_choice == 3:
+                    decompressAudioFile("shannon_fano")
+                elif decomp_choice == 4:
+                    continue
+                else:
+                    print("Invalid choice. Please try again.")
             elif choice == 3:
-                compressAudioFile("shannon_fano")
-            elif choice == 4:
-                compareAllAudioTechniques()
-            elif choice == 5:
                 return
             else:
                 print("Invalid choice. Please try again.")

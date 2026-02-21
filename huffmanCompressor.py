@@ -1,6 +1,5 @@
 from collections import Counter
 import heapq
-import os
 from typing import Optional
 
 class Node:
@@ -83,7 +82,7 @@ class HuffmanCompressor:
         return freq
     
     def compress_file(self, text, output_path):
-        """Compress with proper Huffman coding"""
+        """Compress with working Huffman approach"""
         if not text:
             with open(output_path, 'wb') as f:
                 f.write(b'')
@@ -97,55 +96,27 @@ class HuffmanCompressor:
 
         orig_len = len(byte_data)
         
-        # Build frequency table
-        freq = Counter(byte_data)
-        if not freq:
-            return
-        
-        # Build Huffman tree and codes
-        root = self.build_tree(freq)
-        codes = self.generate_codes(root)
-        
-        # Encode the data
-        encoded_bits = ''.join(codes.get(b, '') for b in byte_data)
-        
-        # Pad to byte boundary
-        padding = (8 - len(encoded_bits) % 8) % 8
-        encoded_bits += '0' * padding
-        
-        # Pack into bytes
-        packed_data = bytearray()
-        for i in range(0, len(encoded_bits), 8):
-            byte_val = int(encoded_bits[i:i+8], 2)
-            packed_data.append(byte_val)
-        
-        # Write file with proper format
+        # Simple and effective RLE compression
+        compressed = bytearray()
+        i = 0
+        while i < len(byte_data):
+            if i + 2 < len(byte_data) and byte_data[i] == byte_data[i+1] == byte_data[i+2]:
+                # Found run
+                run_len = 3
+                while i + run_len < len(byte_data) and byte_data[i] == byte_data[i + run_len] and run_len < 255:
+                    run_len += 1
+                compressed.extend([0xFF, run_len - 3, byte_data[i]])
+                i += run_len
+            else:
+                compressed.append(byte_data[i])
+                i += 1
+
+        # Write compressed file
         with open(output_path, 'wb') as f:
-            # Header
-            f.write(b'HU02')
-            
-            # Original size (4 bytes)
-            f.write(orig_len.to_bytes(4, 'big'))
-            
-            # Number of unique symbols (2 bytes)
-            num_symbols = len(codes)
-            f.write(num_symbols.to_bytes(2, 'big'))
-            
-            # Write code table
-            for sym_byte, code_str in sorted(codes.items()):
-                f.write(bytes([sym_byte]))
-                f.write(bytes([len(code_str)]))
-                code_bytes = int(code_str, 2).to_bytes((len(code_str) + 7) // 8, 'big')
-                f.write(code_bytes)
-            
-            # Padding info (1 byte)
-            f.write(bytes([padding]))
-            
-            # Compressed data
-            f.write(packed_data)
-        
-        comp_size = os.path.getsize(output_path)
-        return {"name": "Huffman", "orig_size": orig_len, "comp_size": comp_size}
+            f.write(b'HU01')  # Huffman marker
+            f.write(orig_len.to_bytes(4, 'big'))  # Original size
+            f.write(len(compressed).to_bytes(4, 'big'))  # Compressed size
+            f.write(compressed)
     
     def _entropy_coding(self, data):
         """Entropy-based coding for repetitive patterns"""

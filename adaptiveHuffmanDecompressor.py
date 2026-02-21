@@ -199,21 +199,23 @@ class AdaptiveHuffmanDecompressor:
         return ""
 
 # --- File paths and public functions ---
+from constants import outputAdaptiveHuffmanText, outputAdaptiveHuffmanDecompressedText
+
 filePath = "./files"
 outputFiles = f"{filePath}/outputs"
-outputAdaptiveHuffmannFiles = f"{outputFiles}/adaptive_huffman_files"
+outputAdaptiveHuffmannFiles = outputAdaptiveHuffmanText
 
 def adaptiveHuffmanDecompression():
     """Decompress an Adaptive Huffman compressed file with file selection."""
     import os
     import glob
-    from constants import outputAdaptiveHuffmannFiles
+    from constants import outputAdaptiveHuffmanText, outputAdaptiveHuffmanDecompressedText
     
     # Find all Adaptive Huffman compressed files
     adaptive_files = []
     for ext in ['*.ahuf']:
-        adaptive_files.extend(glob.glob(f"{outputAdaptiveHuffmannFiles}/*{ext}"))
-        adaptive_files.extend(glob.glob(f"{outputAdaptiveHuffmannFiles}/*{ext.upper()}"))
+        adaptive_files.extend(glob.glob(f"{outputAdaptiveHuffmanText}/*{ext}"))
+        adaptive_files.extend(glob.glob(f"{outputAdaptiveHuffmanText}/*{ext.upper()}"))
     
     if not adaptive_files:
         print("No Adaptive Huffman compressed files found.")
@@ -250,7 +252,7 @@ def adaptiveHuffmanDecompression():
         elif base_name.startswith('compressed_compare_'):
             base_name = base_name[18:]  # Remove 'compressed_compare_' prefix
         
-        output_file = f"{outputAdaptiveHuffmannFiles}/{base_name}.txt"
+        output_file = f"{outputAdaptiveHuffmanDecompressedText}/{base_name}.txt"
         
         write_text_file(output_file, decompressed_text)
         
