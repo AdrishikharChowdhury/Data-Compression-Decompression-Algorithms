@@ -40,6 +40,7 @@ Thumbs.db
 # Output files
 files/outputs/
 *.huf
+files/outputs/decompressed
 
 # Temporary files
 *.tmp

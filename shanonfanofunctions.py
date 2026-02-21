@@ -399,8 +399,8 @@ def _compress_small_image_shannon(image_data, image_path, orig_size):
     compressor = ShannonFanoCompressor()
     output_file = f"{outputShannonImage}/{os.path.splitext(os.path.basename(image_path))[0]}.sf"
     
-    # Use proper Shannon-Fano with frequency table for images
-    compressor.compress_image(image_data, output_file)
+    # Use existing compressor for small images
+    compressor.compress_file(image_data, output_file)
     
     comp_size = os.path.getsize(output_file)
     final_size = min(comp_size, orig_size)
