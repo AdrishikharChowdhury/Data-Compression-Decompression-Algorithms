@@ -2,6 +2,9 @@ import os
 
 filePath = "./files"
 inputFiles = f"{filePath}/inputs"
+inputTextFiles = f"{inputFiles}/text"
+inputImageFiles = f"{inputFiles}/images"
+inputAudioFiles = f"{inputFiles}/audio"
 outputFiles = f"{filePath}/outputs"
 
 # Huffman folders

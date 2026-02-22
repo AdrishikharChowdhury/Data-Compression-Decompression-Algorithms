@@ -2,7 +2,7 @@ from collections import Counter
 from file_handler import read_text_file,_print_results
 import os
 import glob
-from constants import inputFiles,outputShannonFiles,outputShannonText,outputShannonImage,outputShannonAudio,outputAdaptiveHuffmannFiles
+from constants import inputFiles, inputImageFiles, inputAudioFiles, outputShannonFiles,outputShannonText,outputShannonImage,outputShannonAudio,outputAdaptiveHuffmannFiles
 from adaptiveHuffmann import AdaptiveHuffmanCompressor
 from file_handler import read_binary_data
 from shanonCompressor import ShannonFanoCompressor
@@ -963,11 +963,11 @@ def shannonImageCompression():
     available_images = []
     
     for ext in image_extensions:
-        available_images.extend(glob.glob(f"{inputFiles}/*{ext}"))
-        available_images.extend(glob.glob(f"{inputFiles}/*{ext.upper()}"))
+        available_images.extend(glob.glob(f"{inputImageFiles}/{ext}"))
+        available_images.extend(glob.glob(f"{inputImageFiles}/{ext.upper()}"))
     
     if not available_images:
-        print("No image files found in inputs folder.")
+        print("No image files found in inputs/images folder.")
         return
     
     available_images = list(set(available_images))

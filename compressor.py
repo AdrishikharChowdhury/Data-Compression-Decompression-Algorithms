@@ -1,5 +1,5 @@
 import os
-from constants import inputFiles,outputAdaptiveHuffmannFiles,outputHuffmanFiles,outputShannonFiles,outputHuffmanText,outputShannonText,outputAdaptiveHuffmanText
+from constants import inputTextFiles, inputFiles, outputAdaptiveHuffmannFiles,outputHuffmanFiles,outputShannonFiles,outputHuffmanText,outputShannonText,outputAdaptiveHuffmanText
 import glob
 from shanonfanofunctions import _run_shannon_fano
 from huffmanFunctions import _run_huffman
@@ -23,11 +23,11 @@ def compare_all_techniques_with_choice():
     available_files = []
     
     for ext in text_extensions:
-        available_files.extend(glob.glob(f"{inputFiles}/*{ext}"))
-        available_files.extend(glob.glob(f"{inputFiles}/*{ext.upper()}"))
+        available_files.extend(glob.glob(f"{inputTextFiles}/{ext}"))
+        available_files.extend(glob.glob(f"{inputTextFiles}/{ext.upper()}"))
     
     if not available_files:
-        print("No text files found in inputs folder.")
+        print("No text files found in inputs/text folder.")
         return None
     
     # Remove duplicates and sort

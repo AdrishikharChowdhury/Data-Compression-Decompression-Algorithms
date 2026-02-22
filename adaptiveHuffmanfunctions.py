@@ -2,7 +2,7 @@ from collections import Counter
 from adaptiveHuffmann import AdaptiveHuffmanCompressor
 from file_handler import read_text_file,_print_results,read_binary_data
 import os
-from constants import inputFiles,outputAdaptiveHuffmanText,outputAdaptiveHuffmanImage
+from constants import inputFiles, inputImageFiles, inputAudioFiles, outputAdaptiveHuffmanText, outputAdaptiveHuffmanImage
 from huffmanFunctions import _improved_standard_huffman
 from bitarray import bitarray
 
@@ -961,11 +961,11 @@ def adaptiveHuffmanImageCompression():
     available_images = []
     
     for ext in image_extensions:
-        available_images.extend(glob.glob(f"{inputFiles}/*{ext}"))
-        available_images.extend(glob.glob(f"{inputFiles}/*{ext.upper()}"))
+        available_images.extend(glob.glob(f"{inputImageFiles}/{ext}"))
+        available_images.extend(glob.glob(f"{inputImageFiles}/{ext.upper()}"))
     
     if not available_images:
-        print("No image files found in inputs folder.")
+        print("No image files found in inputs/images folder.")
         return
     
     available_images = list(set(available_images))

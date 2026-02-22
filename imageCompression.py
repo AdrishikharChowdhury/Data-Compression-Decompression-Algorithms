@@ -1,6 +1,6 @@
 from adaptiveHuffmanfunctions import _run_adaptive_huffman_image
 import os
-from constants import inputFiles
+from constants import inputImageFiles
 from shanonfanofunctions import _run_shannon_fano_image
 from huffmanFunctions import _run_huffman_image
 import glob
@@ -12,11 +12,11 @@ def compare_all_image_techniques_with_choice():
     available_images = []
     
     for ext in image_extensions:
-        available_images.extend(glob.glob(f"{inputFiles}/*{ext}"))
-        available_images.extend(glob.glob(f"{inputFiles}/*{ext.upper()}"))
+        available_images.extend(glob.glob(f"{inputImageFiles}/{ext}"))
+        available_images.extend(glob.glob(f"{inputImageFiles}/{ext.upper()}"))
     
     if not available_images:
-        print("No image files found in inputs folder.")
+        print("No image files found in inputs/images folder.")
         return
     
     # Remove duplicates and sort

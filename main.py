@@ -10,6 +10,7 @@ from audio_compression import AudioCompressor
 from audioDecompressor import huffman_audio_decompression, adaptive_huffman_audio_decompression, shannon_fano_audio_decompression
 from constants import (
     filePath, inputFiles, outputFiles,
+    inputTextFiles, inputImageFiles, inputAudioFiles,
     outputHuffmanFiles, outputHuffmanText, outputHuffmanImage, outputHuffmanAudio,
     outputHuffmanDecompressedText, outputHuffmanDecompressedImage, outputHuffmanDecompressedAudio,
     outputShannonFiles, outputShannonText, outputShannonImage, outputShannonAudio,
@@ -27,11 +28,11 @@ def selectTextFile():
     available_files = []
     
     for ext in text_extensions:
-        available_files.extend(glob.glob(f"{inputFiles}/*{ext}"))
-        available_files.extend(glob.glob(f"{inputFiles}/*{ext.upper()}"))
+        available_files.extend(glob.glob(f"{inputTextFiles}/{ext}"))
+        available_files.extend(glob.glob(f"{inputTextFiles}/{ext.upper()}"))
     
     if not available_files:
-        print("No text files found in inputs folder.")
+        print("No text files found in inputs/text folder.")
         return None
     
     # Remove duplicates and sort
@@ -348,7 +349,7 @@ def huffmanImageDecompression():
         original_image = None
         
         for ext in original_extensions:
-            potential_original = f"{inputFiles}/{base_name}{ext}"
+            potential_original = f"{inputImageFiles}/{base_name}{ext}"
             if os.path.exists(potential_original):
                 original_image = potential_original
                 break
@@ -423,7 +424,7 @@ def shannonImageDecompression():
         original_image = None
         
         for ext in original_extensions:
-            potential_original = f"{inputFiles}/{base_name}{ext}"
+            potential_original = f"{inputImageFiles}/{base_name}{ext}"
             if os.path.exists(potential_original):
                 original_image = potential_original
                 break
@@ -498,7 +499,7 @@ def adaptiveHuffmanImageDecompression():
         original_image = None
         
         for ext in original_extensions:
-            potential_original = f"{inputFiles}/{base_name}{ext}"
+            potential_original = f"{inputImageFiles}/{base_name}{ext}"
             if os.path.exists(potential_original):
                 original_image = potential_original
                 break
@@ -590,13 +591,13 @@ def selectAudioFile():
     available_files = []
     
     for ext in audio_extensions:
-        available_files.extend(glob.glob(f"{inputFiles}/*{ext}"))
-        available_files.extend(glob.glob(f"{inputFiles}/*{ext.upper()}"))
+        available_files.extend(glob.glob(f"{inputAudioFiles}/{ext}"))
+        available_files.extend(glob.glob(f"{inputAudioFiles}/{ext.upper()}"))
     
     if not available_files:
-        print("No audio files found in inputs folder.")
+        print("No audio files found in inputs/audio folder.")
         print("Supported formats: .wav, .ogg, .mp3")
-        print(f"Place audio files in: {inputFiles}")
+        print(f"Place audio files in: {inputAudioFiles}")
         return None
     
     # Remove duplicates and sort
